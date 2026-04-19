@@ -12,37 +12,44 @@ import type {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-const COLOR_CLASSES: Record<AgentColor, { border: string; bg: string; badge: string; bar: string }> = {
+const COLOR_CLASSES: Record<
+  AgentColor,
+  { border: string; tint: string; badge: string; bar: string; ring: string }
+> = {
   blue: {
-    border: "border-blue-500",
-    bg: "bg-blue-500/5",
-    badge: "bg-blue-500/20 text-blue-300",
-    bar: "bg-blue-500",
+    border: "border-agent-architect/30",
+    tint: "bg-agent-architect/[0.04]",
+    badge: "bg-agent-architect/10 text-agent-architect",
+    bar: "bg-agent-architect",
+    ring: "shadow-[0_0_0_1px_rgba(91,124,160,0.15)]",
   },
   red: {
-    border: "border-red-500",
-    bg: "bg-red-500/5",
-    badge: "bg-red-500/20 text-red-300",
-    bar: "bg-red-500",
+    border: "border-agent-security/30",
+    tint: "bg-agent-security/[0.04]",
+    badge: "bg-agent-security/10 text-agent-security",
+    bar: "bg-agent-security",
+    ring: "shadow-[0_0_0_1px_rgba(198,93,71,0.15)]",
   },
   green: {
-    border: "border-green-500",
-    bg: "bg-green-500/5",
-    badge: "bg-green-500/20 text-green-300",
-    bar: "bg-green-500",
+    border: "border-agent-cost/30",
+    tint: "bg-agent-cost/[0.04]",
+    badge: "bg-agent-cost/10 text-agent-cost",
+    bar: "bg-agent-cost",
+    ring: "shadow-[0_0_0_1px_rgba(122,137,86,0.15)]",
   },
   purple: {
-    border: "border-purple-500",
-    bg: "bg-purple-500/5",
-    badge: "bg-purple-500/20 text-purple-300",
-    bar: "bg-purple-500",
+    border: "border-agent-devil/30",
+    tint: "bg-agent-devil/[0.04]",
+    badge: "bg-agent-devil/10 text-agent-devil",
+    bar: "bg-agent-devil",
+    ring: "shadow-[0_0_0_1px_rgba(142,91,126,0.15)]",
   },
 };
 
 const AGREEMENT_STYLE: Record<string, { dot: string; label: string }> = {
-  agree: { dot: "bg-green-400", label: "text-green-400" },
-  partial: { dot: "bg-yellow-400", label: "text-yellow-400" },
-  disagree: { dot: "bg-red-400", label: "text-red-400" },
+  agree: { dot: "bg-agent-cost", label: "text-agent-cost" },
+  partial: { dot: "bg-honey", label: "text-honey" },
+  disagree: { dot: "bg-agent-security", label: "text-agent-security" },
 };
 
 function SimpleMarkdown({ text, className }: { text: string; className?: string }) {
@@ -53,7 +60,7 @@ function SimpleMarkdown({ text, className }: { text: string; className?: string 
         const parts = line.split(/\*\*([^*]+)\*\*/g);
         const rendered = parts.map((part, j) =>
           j % 2 === 1 ? (
-            <strong key={j} className="text-white font-semibold">
+            <strong key={j} className="text-ink font-semibold">
               {part}
             </strong>
           ) : (
@@ -64,8 +71,10 @@ function SimpleMarkdown({ text, className }: { text: string; className?: string 
         if (line.startsWith("- ") || line.startsWith("• ")) {
           return (
             <div key={i} className="flex gap-2 mt-0.5">
-              <span className="text-gray-600 shrink-0 mt-0.5">•</span>
-              <span>{rendered.map((p, j) => (typeof p === "string" ? p.replace(/^[-•]\s*/, "") : p))}</span>
+              <span className="text-ink-faint shrink-0 mt-0.5">•</span>
+              <span>
+                {rendered.map((p) => (typeof p === "string" ? p.replace(/^[-•]\s*/, "") : p))}
+              </span>
             </div>
           );
         }
@@ -79,13 +88,13 @@ function SimpleMarkdown({ text, className }: { text: string; className?: string 
 function ConfidenceBar({ value, colorClass }: { value: number; colorClass: string }) {
   return (
     <div className="flex items-center gap-2 mt-3">
-      <div className="flex-1 bg-gray-800 rounded-full h-1">
+      <div className="flex-1 bg-paper-beige rounded-full h-1">
         <div
           className={`h-1 rounded-full transition-all duration-700 ${colorClass}`}
           style={{ width: `${value}%` }}
         />
       </div>
-      <span className="text-xs text-gray-500 tabular-nums">{value}%</span>
+      <span className="text-xs text-ink-muted tabular-nums">{value}%</span>
     </div>
   );
 }
@@ -94,20 +103,25 @@ function ConfidenceBar({ value, colorClass }: { value: number; colorClass: strin
 
 function ChairpersonCard({ analysis }: { analysis: ChairpersonAnalysis }) {
   return (
-    <div className="animate-fade-in bg-gray-900 border border-amber-500/40 rounded-2xl p-5">
+    <div className="animate-fade-in bg-paper-light border border-honey/25 rounded-2xl p-5 shadow-[0_1px_2px_rgba(45,31,22,0.04)]">
       <div className="flex items-center gap-2 mb-3">
         <span className="text-lg">⚖️</span>
-        <span className="font-semibold text-amber-400 text-sm tracking-wide">CHAIRPERSON ANALYSIS</span>
+        <span className="font-semibold text-honey text-xs tracking-[0.15em] uppercase">
+          Chairperson Analysis
+        </span>
       </div>
-      <p className="text-white text-sm font-medium mb-3">{analysis.intent}</p>
+      <p className="text-ink text-[15px] font-medium mb-3 leading-snug">{analysis.intent}</p>
       <div className="flex flex-wrap gap-1.5 mb-3">
         {analysis.dimensions.map((d) => (
-          <span key={d} className="text-xs bg-amber-500/15 text-amber-300 rounded-full px-2.5 py-0.5">
+          <span
+            key={d}
+            className="text-xs bg-honey/10 text-honey rounded-full px-2.5 py-0.5 font-medium"
+          >
             {d}
           </span>
         ))}
       </div>
-      <p className="text-xs text-gray-500">{analysis.context}</p>
+      <p className="text-xs text-ink-muted leading-relaxed">{analysis.context}</p>
     </div>
   );
 }
@@ -116,30 +130,30 @@ function AgentCard({ opinion }: { opinion: AgentOpinion }) {
   const c = COLOR_CLASSES[opinion.color];
   return (
     <div
-      className={`animate-fade-in ${c.bg} border-l-4 ${c.border} border border-gray-800 rounded-2xl p-5 flex flex-col`}
+      className={`animate-fade-in ${c.tint} border ${c.border} rounded-2xl p-5 flex flex-col shadow-[0_1px_2px_rgba(45,31,22,0.04)]`}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xl">{opinion.emoji}</span>
           <div>
-            <div className="font-semibold text-sm text-white">{opinion.agentName}</div>
-            <div className="text-xs text-gray-500">{opinion.role}</div>
+            <div className="font-semibold text-sm text-ink">{opinion.agentName}</div>
+            <div className="text-xs text-ink-faint">{opinion.role}</div>
           </div>
         </div>
-        <span className={`text-xs rounded-full px-2 py-0.5 ${c.badge}`}>
-          {opinion.confidence}% confident
+        <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${c.badge}`}>
+          {opinion.confidence}%
         </span>
       </div>
 
       {opinion.assessment && (
-        <p className="text-xs text-gray-300 italic border-l-2 border-gray-700 pl-3 mb-3">
+        <p className="text-[13px] text-ink-soft italic border-l-2 border-line pl-3 mb-3 leading-relaxed">
           {opinion.assessment}
         </p>
       )}
 
       <SimpleMarkdown
         text={opinion.content}
-        className="text-xs text-gray-400 leading-relaxed space-y-0.5 flex-1"
+        className="text-[13px] text-ink-muted leading-relaxed space-y-0.5 flex-1"
       />
 
       <ConfidenceBar value={opinion.confidence} colorClass={c.bar} />
@@ -150,17 +164,19 @@ function AgentCard({ opinion }: { opinion: AgentOpinion }) {
 function DeliberationItem({ d }: { d: Deliberation }) {
   const style = AGREEMENT_STYLE[d.agreement] ?? AGREEMENT_STYLE.partial;
   return (
-    <div className="animate-fade-in flex gap-3 bg-gray-900/60 border border-gray-800 rounded-xl p-3.5">
+    <div className="animate-fade-in flex gap-3 bg-paper-light border border-line-soft rounded-xl p-3.5">
       <span className="text-base shrink-0 mt-0.5">{d.emoji}</span>
       <div className="min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="font-semibold text-xs text-white">{d.fromAgentName}</span>
-          <span className={`flex items-center gap-1 text-xs font-bold ${style.label}`}>
+          <span className="font-semibold text-xs text-ink">{d.fromAgentName}</span>
+          <span
+            className={`flex items-center gap-1 text-[10px] font-bold tracking-wider ${style.label}`}
+          >
             <span className={`w-1.5 h-1.5 rounded-full ${style.dot} inline-block`} />
             {d.agreement.toUpperCase()}
           </span>
         </div>
-        <p className="text-xs text-gray-400 leading-relaxed">{d.critique}</p>
+        <p className="text-[13px] text-ink-muted leading-relaxed">{d.critique}</p>
       </div>
     </div>
   );
@@ -168,23 +184,25 @@ function DeliberationItem({ d }: { d: Deliberation }) {
 
 function ConsensusPanel({ consensus }: { consensus: Consensus }) {
   return (
-    <div className="animate-fade-in bg-gray-900 border border-cyan-500/30 rounded-2xl p-6 shadow-lg shadow-cyan-950/50">
+    <div className="animate-fade-in bg-paper-light border border-rust/30 rounded-2xl p-6 shadow-[0_8px_32px_-8px_rgba(204,120,92,0.2),0_2px_4px_rgba(45,31,22,0.06)]">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xl">🏛️</span>
-        <span className="font-bold text-cyan-400 tracking-wide text-sm">COUNCIL VERDICT</span>
+        <span className="font-bold text-rust tracking-[0.15em] text-xs uppercase">
+          Council Verdict
+        </span>
       </div>
 
-      <p className="text-white font-semibold text-base leading-snug mb-3">
+      <p className="text-ink font-semibold text-lg leading-snug mb-3">
         {consensus.recommendation}
       </p>
 
-      <p className="text-gray-400 text-sm mb-4 leading-relaxed">{consensus.reasoning}</p>
+      <p className="text-ink-soft text-[14px] mb-4 leading-relaxed">{consensus.reasoning}</p>
 
       {consensus.keyPoints?.length > 0 && (
         <div className="space-y-1.5 mb-4">
           {consensus.keyPoints.map((pt, i) => (
-            <div key={i} className="flex gap-2 text-sm text-gray-300">
-              <span className="text-cyan-500 shrink-0">→</span>
+            <div key={i} className="flex gap-2 text-[14px] text-ink-soft leading-relaxed">
+              <span className="text-rust shrink-0 font-semibold">→</span>
               <span>{pt}</span>
             </div>
           ))}
@@ -192,19 +210,19 @@ function ConsensusPanel({ consensus }: { consensus: Consensus }) {
       )}
 
       {consensus.dissent && (
-        <p className="text-xs text-gray-600 border-t border-gray-800 pt-3 italic">
+        <p className="text-xs text-ink-faint border-t border-line-soft pt-3 italic leading-relaxed">
           Minority opinion: {consensus.dissent}
         </p>
       )}
 
       <div className="mt-4 flex items-center gap-2">
-        <div className="flex-1 bg-gray-800 rounded-full h-1.5">
+        <div className="flex-1 bg-paper-beige rounded-full h-1.5">
           <div
-            className="h-1.5 rounded-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-1000"
+            className="h-1.5 rounded-full bg-gradient-to-r from-rust-deep to-rust transition-all duration-1000"
             style={{ width: `${consensus.confidence}%` }}
           />
         </div>
-        <span className="text-xs text-gray-500 tabular-nums">
+        <span className="text-xs text-ink-muted tabular-nums">
           Council confidence: {consensus.confidence}%
         </span>
       </div>
@@ -214,12 +232,12 @@ function ConsensusPanel({ consensus }: { consensus: Consensus }) {
 
 function StatusBar({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-400">
+    <div className="flex items-center gap-2.5 text-sm text-ink-muted">
       <span className="flex gap-0.5">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"
+            className="w-1 h-1 bg-rust rounded-full animate-bounce"
             style={{ animationDelay: `${i * 0.15}s` }}
           />
         ))}
@@ -252,7 +270,12 @@ export default function Home() {
     abortRef.current = abort;
 
     setRunning(true);
-    setSession({ phase: "analyzing", statusMessage: "Starting council session…", opinions: [], deliberations: [] });
+    setSession({
+      phase: "analyzing",
+      statusMessage: "Starting council session…",
+      opinions: [],
+      deliberations: [],
+    });
 
     try {
       const response = await fetch("/api/council", {
@@ -298,7 +321,10 @@ export default function Home() {
                   case "agent_opinion":
                     return { ...prev, opinions: [...prev.opinions, data as AgentOpinion] };
                   case "deliberation":
-                    return { ...prev, deliberations: [...prev.deliberations, data as Deliberation] };
+                    return {
+                      ...prev,
+                      deliberations: [...prev.deliberations, data as Deliberation],
+                    };
                   case "consensus":
                     return { ...prev, consensus: data as Consensus };
                   case "done":
@@ -338,32 +364,34 @@ export default function Home() {
   const isActive = session.phase !== "idle";
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-paper text-ink">
       {/* Header */}
-      <header className="border-b border-gray-800/60 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <header className="border-b border-line-soft px-6 py-4 flex items-center justify-between backdrop-blur-sm bg-paper/80 sticky top-0 z-10">
+        <div className="flex items-center gap-2.5">
           <span className="text-2xl">🏛️</span>
           <div>
-            <h1 className="text-base font-bold text-white leading-none">AI Council</h1>
-            <p className="text-xs text-gray-600 mt-0.5">Round-table intelligence</p>
+            <h1 className="text-base font-bold text-ink leading-none tracking-tight">AI Council</h1>
+            <p className="text-[11px] text-ink-faint mt-1">Round-table intelligence</p>
           </div>
         </div>
         {isActive && (
           <button
             onClick={reset}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-ink-muted hover:text-ink transition-colors font-medium"
           >
             ← New session
           </button>
         )}
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 pb-16">
-        {/* Hero + prompt input */}
+      <main className="max-w-4xl mx-auto px-4 pb-20">
+        {/* Hero */}
         {!isActive && (
-          <div className="pt-20 pb-10 text-center">
-            <h2 className="text-4xl font-bold text-white mb-3">Convene the Council</h2>
-            <p className="text-gray-500 mb-10 max-w-lg mx-auto">
+          <div className="pt-24 pb-10 text-center">
+            <h2 className="text-5xl font-bold text-ink mb-4 tracking-tight">
+              Convene the Council
+            </h2>
+            <p className="text-ink-muted text-lg max-w-xl mx-auto leading-relaxed">
               Present a decision. Four specialized AI agents deliberate in parallel, critique each
               other, then reach consensus.
             </p>
@@ -382,39 +410,35 @@ export default function Home() {
               placeholder="e.g. Design a scalable SaaS architecture for a startup with 1,000 daily active users…"
               rows={isActive ? 2 : 4}
               disabled={running}
-              className="w-full bg-gray-900 border border-gray-700 rounded-2xl p-4 pr-36 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-gray-500 disabled:opacity-50 transition-all"
+              className="w-full bg-paper-light border border-line rounded-2xl p-4 pr-36 text-[15px] text-ink placeholder-ink-mist resize-none focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
             />
             <button
               onClick={convene}
               disabled={running || !prompt.trim()}
-              className="absolute right-3 bottom-3 bg-white text-black text-xs font-semibold px-4 py-2 rounded-xl hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-3 bottom-3 bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               {running ? "Convening…" : "Convene →"}
             </button>
           </div>
-          <p className="text-xs text-gray-700 mt-1.5 pl-1">⌘ + Enter to convene</p>
+          <p className="text-xs text-ink-mist mt-2 pl-1">⌘ + Enter to convene</p>
         </div>
 
         {/* Session output */}
         {isActive && (
           <div className="space-y-6">
-            {/* Status */}
             {session.statusMessage && <StatusBar message={session.statusMessage} />}
 
-            {/* Error */}
             {session.error && (
-              <div className="bg-red-950/40 border border-red-800 rounded-xl p-4 text-sm text-red-300">
+              <div className="bg-agent-security/10 border border-agent-security/30 rounded-xl p-4 text-sm text-agent-security">
                 {session.error}
               </div>
             )}
 
-            {/* Chairperson */}
             {session.chairperson && <ChairpersonCard analysis={session.chairperson} />}
 
-            {/* Council opinions */}
             {session.opinions.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-3">
+                <h3 className="text-[11px] font-semibold text-ink-faint tracking-[0.15em] uppercase mb-3">
                   Council Positions
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -425,10 +449,9 @@ export default function Home() {
               </div>
             )}
 
-            {/* Deliberation */}
             {session.deliberations.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-500 tracking-widest uppercase mb-3">
+                <h3 className="text-[11px] font-semibold text-ink-faint tracking-[0.15em] uppercase mb-3">
                   Deliberation
                 </h3>
                 <div className="space-y-2">
@@ -439,7 +462,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Consensus */}
             {session.consensus && <ConsensusPanel consensus={session.consensus} />}
           </div>
         )}
