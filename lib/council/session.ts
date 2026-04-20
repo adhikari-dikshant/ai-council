@@ -1,5 +1,5 @@
 import { callModel } from "../openrouter";
-import { COUNCIL_AGENTS } from "./agents";
+import { COUNCIL_AGENTS, CHAIRPERSON_MODEL, CONSENSUS_MODEL, formatModelLabel } from "./agents";
 import type { ChairpersonAnalysis, AgentOpinion, Deliberation, Consensus } from "./types";
 
 const CHAIRPERSON_PROMPT = `You are the Chairperson of an AI Council. Analyze incoming requests and structure them for the council.
@@ -26,17 +26,20 @@ Return ONLY valid JSON (no markdown code fences) in this exact shape:
 }`;
 
 function extractJson(text: string): string {
-  // Strip markdown code fences if present
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch) return fenceMatch[1].trim();
-  // Try to find first { ... } block
   const braceMatch = text.match(/\{[\s\S]*\}/);
   if (braceMatch) return braceMatch[0];
   return text.trim();
 }
 
+function resolvedModel(agentModel: string): string {
+  return process.env.COUNCIL_MODEL ?? agentModel;
+}
+
 export async function runChairperson(prompt: string): Promise<ChairpersonAnalysis> {
   const response = await callModel({
+    model: CHAIRPERSON_MODEL,
     systemPrompt: CHAIRPERSON_PROMPT,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.3,
@@ -59,6 +62,8 @@ export async function getAgentOpinion(
   userPrompt: string,
   analysis: ChairpersonAnalysis
 ): Promise<AgentOpinion> {
+  const usedModel = resolvedModel(agent.model);
+
   const contextMessage = `Task: ${userPrompt}
 
 Chairperson's briefing:
@@ -70,6 +75,7 @@ Chairperson's briefing:
 Provide your expert analysis.`;
 
   const response = await callModel({
+    model: usedModel,
     systemPrompt: agent.systemPrompt,
     messages: [{ role: "user", content: contextMessage }],
     temperature: 0.75,
@@ -87,6 +93,8 @@ Provide your expert analysis.`;
     emoji: agent.emoji,
     role: agent.role,
     color: agent.color,
+    model: usedModel,
+    modelLabel: formatModelLabel(usedModel),
     assessment,
     content: response,
     confidence,
@@ -99,6 +107,7 @@ export async function runDeliberation(
 ): Promise<Deliberation[]> {
   return Promise.all(
     opinions.map(async (current) => {
+      const agent = COUNCIL_AGENTS.find((a) => a.id === current.agentId)!;
       const othersSummary = opinions
         .filter((o) => o.agentId !== current.agentId)
         .map((o) => `${o.agentName} (${o.role}): ${o.assessment}`)
@@ -112,6 +121,7 @@ ${othersSummary}
 React briefly (2-3 sentences) from your ${current.role} perspective. Start your response with exactly one of: AGREE, PARTIAL, or DISAGREE — then explain.`;
 
       const response = await callModel({
+        model: resolvedModel(agent.model),
         systemPrompt: `You are the ${current.agentName} on an AI Council (${current.role}). Be direct and opinionated.`,
         messages: [{ role: "user", content: deliberationPrompt }],
         temperature: 0.8,
@@ -141,7 +151,7 @@ export async function buildConsensus(
   userPrompt: string
 ): Promise<Consensus> {
   const opinionsText = opinions
-    .map((o) => `### ${o.agentName} (${o.role})\n${o.content}`)
+    .map((o) => `### ${o.agentName} (${o.role}, via ${o.modelLabel})\n${o.content}`)
     .join("\n\n---\n\n");
 
   const deliberationsText = deliberations
@@ -159,6 +169,7 @@ ${deliberationsText}
 Synthesize a final council recommendation.`;
 
   const response = await callModel({
+    model: CONSENSUS_MODEL,
     systemPrompt: CONSENSUS_PROMPT,
     messages: [{ role: "user", content: consensusPrompt }],
     temperature: 0.4,

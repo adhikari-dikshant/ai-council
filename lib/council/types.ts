@@ -11,6 +11,8 @@ export interface AgentOpinion {
   emoji: string;
   role: string;
   color: AgentColor;
+  model: string;
+  modelLabel: string;
   assessment: string;
   content: string;
   confidence: number;

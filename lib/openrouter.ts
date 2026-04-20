@@ -11,7 +11,8 @@ export async function callModel({
   messages: { role: "user" | "assistant"; content: string }[];
   temperature?: number;
 }): Promise<string> {
-  const resolvedModel = model ?? process.env.COUNCIL_MODEL ?? "openai/gpt-4o-mini";
+  // COUNCIL_MODEL env var overrides all per-agent model choices
+  const resolvedModel = process.env.COUNCIL_MODEL ?? model ?? "openai/gpt-4o-mini";
 
   const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
