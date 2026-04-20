@@ -311,6 +311,7 @@ export default function Home() {
     abortRef.current = abort;
 
     setRunning(true);
+    setPrompt("");
     setSession({
       phase: "analyzing",
       statusMessage: "Starting council session…",
