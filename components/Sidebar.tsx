@@ -1,12 +1,12 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 
 export interface ConversationSummary {
   id: string;
   title: string;
-  createdAt: string;
+  created_at: string;  // Supabase returns snake_case
 }
 
 interface SidebarProps {
@@ -29,7 +29,7 @@ function groupByDate(conversations: ConversationSummary[]) {
   const groups: Record<string, ConversationSummary[]> = {};
 
   for (const c of conversations) {
-    const d = new Date(c.createdAt);
+    const d = new Date(c.created_at);
     let group: string;
     if (d.toDateString() === todayStr) group = "Today";
     else if (d.toDateString() === yesterdayStr) group = "Yesterday";
@@ -145,7 +145,7 @@ export function Sidebar({
             <div className="text-[10px] text-ink-faint truncate">{user.email}</div>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => { await createClient().auth.signOut(); window.location.href = "/login"; }}
             title="Sign out"
             className="text-ink-mist hover:text-rust transition-colors p-1 rounded-lg hover:bg-rust/10"
           >
