@@ -191,6 +191,32 @@ const PROJECT_TYPES = [
   "Other",
 ];
 
+function PromptBox({ value, onChange, onSubmit, running, compact = false }: {
+  value: string; onChange: (v: string) => void; onSubmit: () => void; running: boolean; compact?: boolean;
+}) {
+  return (
+    <div className="relative">
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit(); }}
+        placeholder="Ask the council anything…"
+        rows={compact ? 2 : 4}
+        disabled={running}
+        className="w-full bg-paper-light border border-line rounded-2xl p-4 pr-36 text-[15px] text-ink placeholder-ink-mist resize-none focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
+      />
+      <button
+        onClick={onSubmit}
+        disabled={running || !value.trim()}
+        className="absolute right-3 bottom-3 bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+      >
+        {running ? "Convening…" : "Convene →"}
+      </button>
+      {!compact && <p className="text-xs text-ink-mist mt-2 pl-1">⌘ + Enter to convene</p>}
+    </div>
+  );
+}
+
 function ProposalForm({
   title, setTitle, description, setDescription, projectType, setProjectType, onSubmit, running,
 }: {
@@ -256,6 +282,8 @@ const IDLE: SessionState = { phase: "idle", statusMessage: "", opinions: [], del
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
+  const [mode, setMode] = useState<"chat" | "proposal">("chat");
+  const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [projectType, setProjectType] = useState("");
@@ -299,7 +327,7 @@ export default function Home() {
     if (!data) return;
     setSession({ ...(data.data as SessionState), phase: "done", statusMessage: "" });
     setCurrentId(id);
-    setTitle(""); setDescription(""); setProjectType("");
+    setPrompt(""); setTitle(""); setDescription(""); setProjectType("");
   }, [supabase]);
 
   const deleteConversation = useCallback(async (id: string) => {
@@ -311,7 +339,7 @@ export default function Home() {
   const newSession = useCallback(() => {
     abortRef.current?.abort();
     setSession(IDLE); setCurrentId(null); setRunning(false);
-    setTitle(""); setDescription(""); setProjectType("");
+    setPrompt(""); setTitle(""); setDescription(""); setProjectType("");
   }, []);
 
   const saveSession = useCallback(async (titleText: string, promptText: string, data: SessionState) => {
@@ -329,19 +357,31 @@ export default function Home() {
   }, [supabase, user]);
 
   const convene = useCallback(async () => {
-    if (!title.trim() || !description.trim() || running) return;
-    const proposalTitle = title.trim();
-    const promptText = [
-      projectType ? `Project type: ${projectType}` : "",
-      `Proposal: ${proposalTitle}`,
-      "",
-      description.trim(),
-    ].filter(Boolean).join("\n");
+    if (running) return;
+
+    let promptText: string;
+    let saveTitle: string;
+    if (mode === "chat") {
+      if (!prompt.trim()) return;
+      promptText = prompt.trim();
+      saveTitle = promptText;
+    } else {
+      if (!title.trim() || !description.trim()) return;
+      saveTitle = title.trim();
+      promptText = [
+        projectType ? `Project type: ${projectType}` : "",
+        `Proposal: ${saveTitle}`,
+        "",
+        description.trim(),
+      ].filter(Boolean).join("\n");
+    }
+
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
 
     setRunning(true); setCurrentId(null);
+    if (mode === "chat") setPrompt("");
 
     let live: SessionState = { phase: "analyzing", statusMessage: "Starting…", opinions: [], deliberations: [] };
     const update = (fn: (s: SessionState) => SessionState) => { live = fn(live); setSession({ ...live }); };
@@ -378,7 +418,7 @@ export default function Home() {
               case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
               case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
               case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
-              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(proposalTitle, promptText, live); break;
+              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live); break;
               case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
             }
           } catch { currentEvent = ""; }
@@ -388,7 +428,7 @@ export default function Home() {
       if ((err as Error).name !== "AbortError")
         update((s) => ({ ...s, phase: "error", statusMessage: "", error: err instanceof Error ? err.message : String(err) }));
     } finally { setRunning(false); }
-  }, [title, description, projectType, running, saveSession, user]);
+  }, [mode, prompt, title, description, projectType, running, saveSession, user]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-paper">
@@ -428,18 +468,48 @@ export default function Home() {
               </div>
             )}
             <div className="w-full max-w-2xl py-6 sm:py-10">
+              {/* Mode tabs */}
+              <div className="flex justify-center mb-6 sm:mb-8">
+                <div className="inline-flex bg-paper-light border border-line rounded-full p-1 shadow-[0_1px_2px_rgba(45,31,22,0.03)]">
+                  <button
+                    onClick={() => setMode("chat")}
+                    className={`px-5 py-1.5 text-sm font-medium rounded-full transition-colors ${mode === "chat" ? "bg-rust text-paper-light shadow-sm" : "text-ink-soft hover:text-ink"}`}
+                  >
+                    💬 Chat
+                  </button>
+                  <button
+                    onClick={() => setMode("proposal")}
+                    className={`px-5 py-1.5 text-sm font-medium rounded-full transition-colors ${mode === "proposal" ? "bg-rust text-paper-light shadow-sm" : "text-ink-soft hover:text-ink"}`}
+                  >
+                    📋 Proposal
+                  </button>
+                </div>
+              </div>
+
               <div className="text-center mb-6 sm:mb-8">
-                <h2 className="text-3xl sm:text-5xl font-bold text-ink mb-3 sm:mb-4 tracking-tight">Submit an AI Proposal</h2>
+                <h2 className="text-3xl sm:text-5xl font-bold text-ink mb-3 sm:mb-4 tracking-tight">
+                  {mode === "chat" ? "Convene the Council" : "Submit an AI Proposal"}
+                </h2>
                 <p className="text-ink-muted text-sm sm:text-lg leading-relaxed">
-                  Four specialised agents review your proposal in parallel, deliberate,<br className="hidden sm:block" /> and return a decision with a risk assessment.
+                  {mode === "chat" ? (
+                    <>Present any decision. Four AI models deliberate in parallel,<br className="hidden sm:block" /> critique each other, then reach consensus.</>
+                  ) : (
+                    <>Four specialised agents review your proposal in parallel, deliberate,<br className="hidden sm:block" /> and return a decision with a risk assessment.</>
+                  )}
                 </p>
               </div>
-              <ProposalForm
-                title={title} setTitle={setTitle}
-                description={description} setDescription={setDescription}
-                projectType={projectType} setProjectType={setProjectType}
-                onSubmit={convene} running={running}
-              />
+
+              {mode === "chat" ? (
+                <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} />
+              ) : (
+                <ProposalForm
+                  title={title} setTitle={setTitle}
+                  description={description} setDescription={setDescription}
+                  projectType={projectType} setProjectType={setProjectType}
+                  onSubmit={convene} running={running}
+                />
+              )}
+
               <div className="mt-6 flex flex-wrap justify-center gap-2">
                 {[["🏗️","Architect · GPT-4o mini"],["🔐","Security · Claude 3 Haiku"],["💸","Cost · Gemini 1.5 Flash"],["😈","Devil's Advocate · Llama 3.1 8B"]].map(([e,l]) => (
                   <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
@@ -447,7 +517,7 @@ export default function Home() {
               </div>
               {!user && (
                 <p className="text-center text-xs text-ink-mist mt-6">
-                  <a href="/login" className="text-rust hover:text-rust-deep underline underline-offset-2">Sign in</a> to save your decision history.
+                  <a href="/login" className="text-rust hover:text-rust-deep underline underline-offset-2">Sign in</a> to save your {mode === "chat" ? "conversations" : "decision history"}.
                 </p>
               )}
             </div>
@@ -493,17 +563,23 @@ export default function Home() {
             </main>
 
             <div className="shrink-0 border-t border-line-soft bg-paper/90 backdrop-blur-md px-4 sm:px-6 py-3">
-              <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-                <p className="text-xs text-ink-mist">
-                  {running ? "Council is deliberating…" : session.phase === "done" ? "Decision recorded." : ""}
-                </p>
-                <button
-                  onClick={newSession}
-                  disabled={running}
-                  className="bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-                >
-                  Start new proposal →
-                </button>
+              <div className="max-w-3xl mx-auto">
+                {mode === "chat" ? (
+                  <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} compact />
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-ink-mist">
+                      {running ? "Council is deliberating…" : session.phase === "done" ? "Decision recorded." : ""}
+                    </p>
+                    <button
+                      onClick={newSession}
+                      disabled={running}
+                      className="bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    >
+                      Start new proposal →
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </>
