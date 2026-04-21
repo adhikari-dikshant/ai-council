@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationBell } from "./NotificationBell";
 
 export interface ConversationSummary {
   id: string;
@@ -15,7 +17,7 @@ interface SidebarProps {
   onNew: () => void;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
-  user: { name?: string | null; email?: string | null; image?: string | null };
+  user: { id: string; name?: string | null; email?: string | null; image?: string | null; role?: string | null };
   loading: boolean;
   open: boolean;
   onClose: () => void;
@@ -83,8 +85,8 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* New session */}
-        <div className="px-3 py-2">
+        {/* Nav links */}
+        <div className="px-3 pt-2 pb-1 space-y-0.5">
           <button
             onClick={() => { onNew(); onClose(); }}
             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-ink-soft hover:bg-paper-beige hover:text-ink transition-colors font-medium"
@@ -94,17 +96,39 @@ export function Sidebar({
             </svg>
             New proposal
           </button>
+          <Link
+            href="/proposals"
+            onClick={onClose}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-paper-beige hover:text-ink transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Proposals
+          </Link>
+          {user.role === "admin" && (
+            <Link
+              href="/admin"
+              onClick={onClose}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-ink-soft hover:bg-paper-beige hover:text-ink transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* Conversation list */}
-        <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4">
+        <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-4 mt-1">
           {loading && (
             <div className="px-3 py-4 text-xs text-ink-mist text-center">Loading…</div>
           )}
 
           {!loading && conversations.length === 0 && (
             <div className="px-3 py-8 text-xs text-ink-mist text-center leading-relaxed">
-              No proposals yet.<br />Submit your first one.
+              No chats yet.<br />Submit your first proposal.
             </div>
           )}
 
@@ -142,7 +166,7 @@ export function Sidebar({
 
         {/* User footer */}
         <div className="border-t border-line-soft px-3 py-3">
-          <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl">
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl">
             {user.image ? (
               <Image
                 src={user.image}
@@ -160,6 +184,7 @@ export function Sidebar({
               <div className="text-xs font-medium text-ink truncate">{user.name ?? "You"}</div>
               <div className="text-[10px] text-ink-faint truncate">{user.email}</div>
             </div>
+            <NotificationBell userId={user.id} />
             <button
               onClick={async () => { await createClient().auth.signOut(); window.location.href = "/login"; }}
               title="Sign out"

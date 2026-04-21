@@ -11,6 +11,7 @@ import type {
   ChairpersonAnalysis, Consensus, AgentColor,
 } from "@/lib/council/types";
 import type { ConversationSummary } from "@/components/Sidebar";
+import type { UserRole } from "@/lib/types";
 
 // ─── colour map ───────────────────────────────────────────────────────────────
 
@@ -282,6 +283,7 @@ const IDLE: SessionState = { phase: "idle", statusMessage: "", opinions: [], del
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [mode, setMode] = useState<"chat" | "proposal">("chat");
   const [prompt, setPrompt] = useState("");
   const [title, setTitle] = useState("");
@@ -297,10 +299,19 @@ export default function Home() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const isActive = session.phase !== "idle";
 
-  // Auth
+  // Auth + profile
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setUser(s?.user ?? null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      setUser(data.user);
+      if (data.user) {
+        const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+        setUserRole((prof?.role as UserRole) ?? "proposer");
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
+      setUser(s?.user ?? null);
+      if (!s?.user) setUserRole(null);
+    });
     return () => subscription.unsubscribe();
   }, [supabase]);
 
@@ -342,9 +353,16 @@ export default function Home() {
     setPrompt(""); setTitle(""); setDescription(""); setProjectType("");
   }, []);
 
-  const saveSession = useCallback(async (titleText: string, promptText: string, data: SessionState) => {
+  const saveSession = useCallback(async (
+    titleText: string,
+    promptText: string,
+    data: SessionState,
+    proposalMeta?: { title: string; description: string; projectType: string },
+  ) => {
     if (!user) return;
     const saveTitle = titleText.length > 60 ? titleText.slice(0, 60) + "…" : titleText;
+
+    // Always save to conversations (chat history)
     const { data: row } = await supabase
       .from("conversations")
       .insert({ user_id: user.id, title: saveTitle, prompt: promptText, data })
@@ -353,6 +371,20 @@ export default function Home() {
     if (row) {
       setCurrentId(row.id);
       setConversations((prev) => [row as ConversationSummary, ...prev]);
+    }
+
+    // Also persist to proposals table in proposal mode
+    if (proposalMeta) {
+      await supabase.from("proposals").insert({
+        author_id: user.id,
+        title: proposalMeta.title.length > 200 ? proposalMeta.title.slice(0, 200) + "…" : proposalMeta.title,
+        project_type: proposalMeta.projectType || null,
+        description: proposalMeta.description,
+        status: "submitted",
+        ai_review: data,
+        ai_decision: data.consensus?.decision ?? null,
+        risk_level: data.consensus?.riskLevel ?? null,
+      });
     }
   }, [supabase, user]);
 
@@ -418,7 +450,7 @@ export default function Home() {
               case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
               case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
               case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
-              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live); break;
+              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live, mode === "proposal" ? { title, description, projectType } : undefined); break;
               case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
             }
           } catch { currentEvent = ""; }
@@ -436,7 +468,7 @@ export default function Home() {
         <Sidebar
           conversations={conversations} currentId={currentId ?? undefined}
           onNew={newSession} onSelect={loadConversation} onDelete={deleteConversation}
-          user={{ name: user.user_metadata?.full_name ?? user.email ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null }}
+          user={{ id: user.id, name: user.user_metadata?.full_name ?? user.email ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null, role: userRole }}
           loading={loadingConvos}
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
