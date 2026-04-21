@@ -27,6 +27,24 @@ const AGREE_STYLE: Record<string, { dot: string; label: string }> = {
   disagree: { dot: "bg-agent-security", label: "text-agent-security" },
 };
 
+const VOTE_STYLE: Record<"approve" | "reject" | "revise", { bg: string; label: string }> = {
+  approve: { bg: "bg-agent-cost/10 text-agent-cost border-agent-cost/30",         label: "Approve" },
+  reject:  { bg: "bg-agent-security/10 text-agent-security border-agent-security/30", label: "Reject"  },
+  revise:  { bg: "bg-honey/10 text-honey border-honey/30",                        label: "Revise"  },
+};
+
+const RISK_STYLE: Record<"low" | "medium" | "high", { bg: string; label: string }> = {
+  low:    { bg: "bg-agent-cost/10 text-agent-cost border-agent-cost/30",         label: "Low risk"    },
+  medium: { bg: "bg-honey/10 text-honey border-honey/30",                        label: "Medium risk" },
+  high:   { bg: "bg-agent-security/10 text-agent-security border-agent-security/30", label: "High risk"   },
+};
+
+const DECISION_STYLE: Record<"approved" | "rejected" | "revision_required", { bg: string; label: string }> = {
+  approved:           { bg: "bg-agent-cost/10 text-agent-cost border-agent-cost/30",         label: "Approved" },
+  rejected:           { bg: "bg-agent-security/10 text-agent-security border-agent-security/30", label: "Rejected" },
+  revision_required:  { bg: "bg-honey/10 text-honey border-honey/30",                        label: "Revision required" },
+};
+
 // ─── tiny markdown renderer ───────────────────────────────────────────────────
 
 function MD({ text, className }: { text: string; className?: string }) {
@@ -77,6 +95,11 @@ function AgentCard({ o }: { o: AgentOpinion }) {
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+          {o.vote && (
+            <span className={`text-[10px] font-semibold tracking-wider uppercase rounded-full px-2 py-0.5 border ${VOTE_STYLE[o.vote].bg}`}>
+              {VOTE_STYLE[o.vote].label}
+            </span>
+          )}
           <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${c.badge}`}>{o.confidence}%</span>
           <span className="text-[10px] text-ink-mist font-mono bg-paper-beige px-1.5 py-0.5 rounded">{o.modelLabel}</span>
         </div>
@@ -115,7 +138,21 @@ function DelibItem({ d }: { d: Deliberation }) {
 function VerdictCard({ c }: { c: Consensus }) {
   return (
     <div className="animate-fade-in bg-paper-light border border-rust/30 rounded-2xl p-6 shadow-[0_8px_32px_-8px_rgba(204,120,92,0.18)]">
-      <div className="flex items-center gap-2 mb-4"><span>🏛️</span><span className="font-bold text-rust tracking-[0.15em] text-xs uppercase">Council Verdict</span></div>
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div className="flex items-center gap-2"><span>🏛️</span><span className="font-bold text-rust tracking-[0.15em] text-xs uppercase">Council Verdict</span></div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {c.decision && (
+            <span className={`text-[11px] font-semibold tracking-wider uppercase rounded-full px-3 py-1 border ${DECISION_STYLE[c.decision].bg}`}>
+              {DECISION_STYLE[c.decision].label}
+            </span>
+          )}
+          {c.riskLevel && (
+            <span className={`text-[11px] font-semibold tracking-wider uppercase rounded-full px-3 py-1 border ${RISK_STYLE[c.riskLevel].bg}`}>
+              {RISK_STYLE[c.riskLevel].label}
+            </span>
+          )}
+        </div>
+      </div>
       <p className="text-ink font-semibold text-lg leading-snug mb-3">{c.recommendation}</p>
       <p className="text-ink-soft text-[14px] mb-4 leading-relaxed">{c.reasoning}</p>
       {c.keyPoints?.length > 0 && (
@@ -145,25 +182,69 @@ function StatusDots({ message }: { message: string }) {
   );
 }
 
-function PromptBox({ value, onChange, onSubmit, running, compact = false }: {
-  value: string; onChange: (v: string) => void; onSubmit: () => void; running: boolean; compact?: boolean;
+const PROJECT_TYPES = [
+  "New AI feature",
+  "Third-party AI integration",
+  "Data / ML pipeline",
+  "Internal AI tool",
+  "Customer-facing AI",
+  "Other",
+];
+
+function ProposalForm({
+  title, setTitle, description, setDescription, projectType, setProjectType, onSubmit, running,
+}: {
+  title: string; setTitle: (v: string) => void;
+  description: string; setDescription: (v: string) => void;
+  projectType: string; setProjectType: (v: string) => void;
+  onSubmit: () => void; running: boolean;
 }) {
+  const canSubmit = title.trim() && description.trim();
   return (
-    <div className="relative">
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit(); }}
-        placeholder="Ask the council anything…"
-        rows={compact ? 2 : 4}
-        disabled={running}
-        className="w-full bg-paper-light border border-line rounded-2xl p-4 pr-36 text-[15px] text-ink placeholder-ink-mist resize-none focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
-      />
-      <button onClick={onSubmit} disabled={running || !value.trim()}
-        className="absolute right-3 bottom-3 bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm">
-        {running ? "Convening…" : "Convene →"}
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-ink-soft mb-1.5">Proposal title</label>
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Add GPT-4 summarization to our document review flow"
+          disabled={running}
+          className="w-full bg-paper-light border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder-ink-mist focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-ink-soft mb-1.5">Project type <span className="text-ink-mist font-normal">(optional)</span></label>
+        <select
+          value={projectType}
+          onChange={(e) => setProjectType(e.target.value)}
+          disabled={running}
+          className="w-full bg-paper-light border border-line rounded-xl px-4 py-3 text-sm text-ink focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
+        >
+          <option value="">Select type…</option>
+          {PROJECT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-ink-soft mb-1.5">Description &amp; context</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSubmit(); }}
+          placeholder="What does this project do? What data does it use? What decisions will it drive? Known risks, constraints, or unknowns…"
+          rows={5}
+          disabled={running}
+          className="w-full bg-paper-light border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder-ink-mist resize-none focus:outline-none focus:border-rust/50 focus:ring-2 focus:ring-rust/10 disabled:opacity-50 transition-all shadow-[0_1px_2px_rgba(45,31,22,0.03)]"
+        />
+      </div>
+      <button
+        onClick={onSubmit}
+        disabled={running || !canSubmit}
+        className="w-full bg-rust text-paper-light text-sm font-semibold px-4 py-3 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+      >
+        {running ? "Convening council…" : "Submit for council review →"}
       </button>
-      {!compact && <p className="text-xs text-ink-mist mt-2 pl-1">⌘ + Enter to convene</p>}
+      <p className="text-center text-xs text-ink-mist">⌘ + Enter to submit</p>
     </div>
   );
 }
@@ -175,7 +256,9 @@ const IDLE: SessionState = { phase: "idle", statusMessage: "", opinions: [], del
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<User | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [projectType, setProjectType] = useState("");
   const [session, setSession] = useState<SessionState>(IDLE);
   const [running, setRunning] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -215,7 +298,7 @@ export default function Home() {
     if (!data) return;
     setSession({ ...(data.data as SessionState), phase: "done", statusMessage: "" });
     setCurrentId(id);
-    setPrompt("");
+    setTitle(""); setDescription(""); setProjectType("");
   }, [supabase]);
 
   const deleteConversation = useCallback(async (id: string) => {
@@ -226,15 +309,16 @@ export default function Home() {
 
   const newSession = useCallback(() => {
     abortRef.current?.abort();
-    setSession(IDLE); setCurrentId(null); setRunning(false); setPrompt("");
+    setSession(IDLE); setCurrentId(null); setRunning(false);
+    setTitle(""); setDescription(""); setProjectType("");
   }, []);
 
-  const saveSession = useCallback(async (promptText: string, data: SessionState) => {
+  const saveSession = useCallback(async (titleText: string, promptText: string, data: SessionState) => {
     if (!user) return;
-    const title = promptText.length > 60 ? promptText.slice(0, 60) + "…" : promptText;
+    const saveTitle = titleText.length > 60 ? titleText.slice(0, 60) + "…" : titleText;
     const { data: row } = await supabase
       .from("conversations")
-      .insert({ user_id: user.id, title, prompt: promptText, data })
+      .insert({ user_id: user.id, title: saveTitle, prompt: promptText, data })
       .select("id, title, created_at")
       .single();
     if (row) {
@@ -244,13 +328,19 @@ export default function Home() {
   }, [supabase, user]);
 
   const convene = useCallback(async () => {
-    if (!prompt.trim() || running) return;
-    const promptText = prompt;
+    if (!title.trim() || !description.trim() || running) return;
+    const proposalTitle = title.trim();
+    const promptText = [
+      projectType ? `Project type: ${projectType}` : "",
+      `Proposal: ${proposalTitle}`,
+      "",
+      description.trim(),
+    ].filter(Boolean).join("\n");
     abortRef.current?.abort();
     const abort = new AbortController();
     abortRef.current = abort;
 
-    setRunning(true); setCurrentId(null); setPrompt("");
+    setRunning(true); setCurrentId(null);
 
     let live: SessionState = { phase: "analyzing", statusMessage: "Starting…", opinions: [], deliberations: [] };
     const update = (fn: (s: SessionState) => SessionState) => { live = fn(live); setSession({ ...live }); };
@@ -287,7 +377,7 @@ export default function Home() {
               case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
               case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
               case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
-              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(promptText, live); break;
+              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(proposalTitle, promptText, live); break;
               case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
             }
           } catch { currentEvent = ""; }
@@ -297,7 +387,7 @@ export default function Home() {
       if ((err as Error).name !== "AbortError")
         update((s) => ({ ...s, phase: "error", statusMessage: "", error: err instanceof Error ? err.message : String(err) }));
     } finally { setRunning(false); }
-  }, [prompt, running, saveSession]);
+  }, [title, description, projectType, running, saveSession, user]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-paper">
@@ -319,22 +409,27 @@ export default function Home() {
                 <a href="/login" className="text-sm font-semibold bg-rust text-paper-light px-4 py-1.5 rounded-xl hover:bg-rust-deep transition-colors shadow-sm">Sign up</a>
               </div>
             )}
-            <div className="w-full max-w-2xl">
-              <div className="text-center mb-10">
-                <h2 className="text-5xl font-bold text-ink mb-4 tracking-tight">Convene the Council</h2>
+            <div className="w-full max-w-2xl py-10">
+              <div className="text-center mb-8">
+                <h2 className="text-5xl font-bold text-ink mb-4 tracking-tight">Submit an AI Proposal</h2>
                 <p className="text-ink-muted text-lg leading-relaxed">
-                  Present a decision. Four AI models deliberate in parallel,<br className="hidden sm:block" /> critique each other, then reach consensus.
+                  Four specialised agents review your proposal in parallel, deliberate,<br className="hidden sm:block" /> and return a decision with a risk assessment.
                 </p>
               </div>
-              <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} />
+              <ProposalForm
+                title={title} setTitle={setTitle}
+                description={description} setDescription={setDescription}
+                projectType={projectType} setProjectType={setProjectType}
+                onSubmit={convene} running={running}
+              />
               <div className="mt-6 flex flex-wrap justify-center gap-2">
-                {[["🏗️","GPT-4o mini"],["🔐","Claude 3 Haiku"],["💸","Gemini 1.5 Flash"],["😈","Llama 3.1 8B"]].map(([e,l]) => (
+                {[["🏗️","Architect · GPT-4o mini"],["🔐","Security · Claude 3 Haiku"],["💸","Cost · Gemini 1.5 Flash"],["😈","Devil's Advocate · Llama 3.1 8B"]].map(([e,l]) => (
                   <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
                 ))}
               </div>
               {!user && (
                 <p className="text-center text-xs text-ink-mist mt-6">
-                  <a href="/login" className="text-rust hover:text-rust-deep underline underline-offset-2">Sign in</a> to save your conversations.
+                  <a href="/login" className="text-rust hover:text-rust-deep underline underline-offset-2">Sign in</a> to save your decision history.
                 </p>
               )}
             </div>
@@ -380,8 +475,17 @@ export default function Home() {
             </main>
 
             <div className="shrink-0 border-t border-line-soft bg-paper/90 backdrop-blur-md px-6 py-3">
-              <div className="max-w-3xl mx-auto">
-                <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} compact />
+              <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+                <p className="text-xs text-ink-mist">
+                  {running ? "Council is deliberating…" : session.phase === "done" ? "Decision recorded." : ""}
+                </p>
+                <button
+                  onClick={newSession}
+                  disabled={running}
+                  className="bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+                >
+                  Start new proposal →
+                </button>
               </div>
             </div>
           </>

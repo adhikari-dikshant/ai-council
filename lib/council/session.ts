@@ -12,9 +12,19 @@ Return ONLY valid JSON (no markdown code fences) in this exact shape:
   "scope": "brief description of decision scope"
 }`;
 
-const CONSENSUS_PROMPT = `You are the Consensus Engine of an AI Council. You receive expert opinions and deliberation from council agents. Synthesize them into a unified recommendation.
+const CONSENSUS_PROMPT = `You are the Consensus Engine of an AI Council reviewing AI project proposals. You receive expert opinions and deliberation from council agents. Synthesize them into a unified decision report.
 
 Weigh areas of agreement heavily. Acknowledge valid unresolved critiques. Be actionable.
+
+For "decision":
+- "approved" = majority vote APPROVE with no critical blockers
+- "rejected" = majority vote REJECT or critical unresolvable risks
+- "revision_required" = concerns can be addressed; proposal should be revised and resubmitted
+
+For "riskLevel":
+- "low" = minor issues, safe to proceed
+- "medium" = meaningful risks that need mitigation
+- "high" = serious ethical, legal, security, or operational risks
 
 Return ONLY valid JSON (no markdown code fences) in this exact shape:
 {
@@ -22,7 +32,9 @@ Return ONLY valid JSON (no markdown code fences) in this exact shape:
   "reasoning": "why this is the best path given all perspectives",
   "keyPoints": ["insight1", "insight2", "insight3"],
   "dissent": "notable minority opinion worth flagging",
-  "confidence": 85
+  "confidence": 85,
+  "decision": "approved" | "rejected" | "revision_required",
+  "riskLevel": "low" | "medium" | "high"
 }`;
 
 function extractJson(text: string): string {
@@ -87,6 +99,11 @@ Provide your expert analysis.`;
   const assessmentMatch = response.match(/\*\*Assessment:\*\*\s*([^\n]+)/);
   const assessment = assessmentMatch ? assessmentMatch[1].trim() : "";
 
+  const voteMatch = response.match(/\*\*Vote:\*\*\s*(APPROVE|REJECT|REVISE)/i);
+  const voteRaw = voteMatch?.[1]?.toLowerCase();
+  const vote: AgentOpinion["vote"] =
+    voteRaw === "approve" ? "approve" : voteRaw === "reject" ? "reject" : voteRaw === "revise" ? "revise" : undefined;
+
   return {
     agentId: agent.id,
     agentName: agent.name,
@@ -98,6 +115,7 @@ Provide your expert analysis.`;
     assessment,
     content: response,
     confidence,
+    vote,
   };
 }
 

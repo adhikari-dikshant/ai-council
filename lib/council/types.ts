@@ -16,6 +16,7 @@ export interface AgentOpinion {
   assessment: string;
   content: string;
   confidence: number;
+  vote?: "approve" | "reject" | "revise";
 }
 
 export interface Deliberation {
@@ -32,6 +33,8 @@ export interface Consensus {
   keyPoints: string[];
   dissent: string;
   confidence: number;
+  decision?: "approved" | "rejected" | "revision_required";
+  riskLevel?: "low" | "medium" | "high";
 }
 
 export type AgentColor = "blue" | "red" | "green" | "purple";
