@@ -94,7 +94,7 @@ export function NotificationBell({ userId }: Props) {
             </button>
 
             {open && (
-                <div className="absolute left-0 bottom-10 w-72 bg-paper-light border border-line shadow-[0_8px_32px_-4px_rgba(45,31,22,0.15)] rounded-2xl overflow-hidden z-50">
+                <div className="absolute right-0 bottom-10 w-72 bg-paper-light border border-line shadow-[0_8px_32px_-4px_rgba(45,31,22,0.15)] rounded-2xl overflow-hidden z-[200]">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft">
                         <span className="text-xs font-semibold text-ink">Notifications</span>
                         <div className="flex gap-2">
