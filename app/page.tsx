@@ -264,6 +264,7 @@ export default function Home() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [loadingConvos, setLoadingConvos] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isActive = session.phase !== "idle";
@@ -397,22 +398,39 @@ export default function Home() {
           onNew={newSession} onSelect={loadConversation} onDelete={deleteConversation}
           user={{ name: user.user_metadata?.full_name ?? user.email ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null }}
           loading={loadingConvos}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
       )}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Mobile header */}
+        <header className="md:hidden shrink-0 flex items-center justify-between px-4 py-3 border-b border-line-soft bg-paper-warm">
+          {user ? (
+            <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg text-ink-soft hover:text-ink hover:bg-paper-beige transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          ) : <div className="w-8" />}
+          <span className="text-sm font-bold text-ink">🏛️ AI Council</span>
+          {!user ? (
+            <a href="/login" className="text-sm font-semibold text-rust hover:text-rust-deep transition-colors">Sign in</a>
+          ) : <div className="w-8" />}
+        </header>
+
         {!isActive ? (
-          <main className="flex-1 flex flex-col items-center justify-center px-6 overflow-y-auto">
+          <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 overflow-y-auto relative">
             {!user && (
-              <div className="absolute top-4 right-4 flex items-center gap-3">
+              <div className="hidden md:flex absolute top-4 right-4 items-center gap-3">
                 <a href="/login" className="text-sm font-medium text-ink-soft hover:text-ink transition-colors">Sign in</a>
                 <a href="/login" className="text-sm font-semibold bg-rust text-paper-light px-4 py-1.5 rounded-xl hover:bg-rust-deep transition-colors shadow-sm">Sign up</a>
               </div>
             )}
-            <div className="w-full max-w-2xl py-10">
-              <div className="text-center mb-8">
-                <h2 className="text-5xl font-bold text-ink mb-4 tracking-tight">Submit an AI Proposal</h2>
-                <p className="text-ink-muted text-lg leading-relaxed">
+            <div className="w-full max-w-2xl py-6 sm:py-10">
+              <div className="text-center mb-6 sm:mb-8">
+                <h2 className="text-3xl sm:text-5xl font-bold text-ink mb-3 sm:mb-4 tracking-tight">Submit an AI Proposal</h2>
+                <p className="text-ink-muted text-sm sm:text-lg leading-relaxed">
                   Four specialised agents review your proposal in parallel, deliberate,<br className="hidden sm:block" /> and return a decision with a risk assessment.
                 </p>
               </div>
@@ -437,7 +455,7 @@ export default function Home() {
         ) : (
           <>
             <main className="flex-1 overflow-y-auto">
-              <div className="max-w-3xl mx-auto px-6 pt-6 pb-6 space-y-6">
+              <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6 space-y-4 sm:space-y-6">
                 {session.statusMessage && <StatusDots message={session.statusMessage} />}
                 {session.error && <div className="bg-agent-security/10 border border-agent-security/30 rounded-xl p-4 text-sm text-agent-security">{session.error}</div>}
 
@@ -474,7 +492,7 @@ export default function Home() {
               </div>
             </main>
 
-            <div className="shrink-0 border-t border-line-soft bg-paper/90 backdrop-blur-md px-6 py-3">
+            <div className="shrink-0 border-t border-line-soft bg-paper/90 backdrop-blur-md px-4 sm:px-6 py-3">
               <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
                 <p className="text-xs text-ink-mist">
                   {running ? "Council is deliberating…" : session.phase === "done" ? "Decision recorded." : ""}
