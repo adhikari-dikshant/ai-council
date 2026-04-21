@@ -192,7 +192,7 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  // Load conversation list from Supabase
+  // Load conversation list from Supabase (only when logged in)
   const fetchConversations = useCallback(async () => {
     setLoadingConvos(true);
     const { data } = await supabase
@@ -203,7 +203,7 @@ export default function Home() {
     setLoadingConvos(false);
   }, [supabase]);
 
-  useEffect(() => { fetchConversations(); }, [fetchConversations]);
+  useEffect(() => { if (user) fetchConversations(); else setLoadingConvos(false); }, [user, fetchConversations]);
 
   // Auto-scroll
   useEffect(() => {
@@ -287,7 +287,7 @@ export default function Home() {
               case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
               case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
               case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
-              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); await saveSession(promptText, live); break;
+              case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(promptText, live); break;
               case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
             }
           } catch { currentEvent = ""; }
@@ -301,16 +301,24 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-paper">
-      <Sidebar
-        conversations={conversations} currentId={currentId ?? undefined}
-        onNew={newSession} onSelect={loadConversation} onDelete={deleteConversation}
-        user={{ name: user?.user_metadata?.full_name ?? user?.email ?? null, email: user?.email ?? null, image: user?.user_metadata?.avatar_url ?? null }}
-        loading={loadingConvos}
-      />
+      {user && (
+        <Sidebar
+          conversations={conversations} currentId={currentId ?? undefined}
+          onNew={newSession} onSelect={loadConversation} onDelete={deleteConversation}
+          user={{ name: user.user_metadata?.full_name ?? user.email ?? null, email: user.email ?? null, image: user.user_metadata?.avatar_url ?? null }}
+          loading={loadingConvos}
+        />
+      )}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {!isActive ? (
           <main className="flex-1 flex flex-col items-center justify-center px-6 overflow-y-auto">
+            {!user && (
+              <div className="absolute top-4 right-4 flex items-center gap-3">
+                <a href="/login" className="text-sm font-medium text-ink-soft hover:text-ink transition-colors">Sign in</a>
+                <a href="/login" className="text-sm font-semibold bg-rust text-paper-light px-4 py-1.5 rounded-xl hover:bg-rust-deep transition-colors shadow-sm">Sign up</a>
+              </div>
+            )}
             <div className="w-full max-w-2xl">
               <div className="text-center mb-10">
                 <h2 className="text-5xl font-bold text-ink mb-4 tracking-tight">Convene the Council</h2>
@@ -324,6 +332,11 @@ export default function Home() {
                   <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
                 ))}
               </div>
+              {!user && (
+                <p className="text-center text-xs text-ink-mist mt-6">
+                  <a href="/login" className="text-rust hover:text-rust-deep underline underline-offset-2">Sign in</a> to save your conversations.
+                </p>
+              )}
             </div>
           </main>
         ) : (

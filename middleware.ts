@@ -23,14 +23,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
-  const isPublic = pathname.startsWith("/login") || pathname.startsWith("/auth/callback") || pathname.startsWith("/auth/reset-password");
 
-  if (!user && !isPublic) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
+  // Redirect logged-in users away from the login page
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";

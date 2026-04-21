@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { COUNCIL_AGENTS } from "@/lib/council/agents";
 import {
   runChairperson,
@@ -12,9 +11,6 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
 
   if (!process.env.OPENROUTER_API_KEY) {
     return new Response(
