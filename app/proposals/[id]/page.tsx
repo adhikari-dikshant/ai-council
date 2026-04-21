@@ -34,9 +34,31 @@ export default function ProposalDetailPage() {
     const [posting, setPosting] = useState(false);
 
     const load = useCallback(async () => {
-        const { data, error } = await supabase.from("proposals").select("*").eq("id", id).single();
-        if (error || !data) { setError("Proposal not found."); setLoading(false); return; }
-        setProposal(data as Proposal);
+        // Try proposals table first, fall back to conversations
+        let data: Proposal | null = null;
+        const { data: proposalRow } = await supabase.from("proposals").select("*").eq("id", id).single();
+        if (proposalRow) {
+            data = proposalRow as Proposal;
+        } else {
+            const { data: convRow } = await supabase.from("conversations").select("*").eq("id", id).single();
+            if (convRow) {
+                data = {
+                    id: convRow.id,
+                    author_id: convRow.user_id,
+                    title: convRow.title,
+                    project_type: null,
+                    description: convRow.prompt,
+                    status: (convRow.data?.consensus?.decision ?? "submitted") as Proposal["status"],
+                    ai_review: convRow.data,
+                    ai_decision: convRow.data?.consensus?.decision ?? null,
+                    risk_level: convRow.data?.consensus?.riskLevel ?? null,
+                    created_at: convRow.created_at,
+                    updated_at: convRow.created_at,
+                } as Proposal;
+            }
+        }
+        if (!data) { setError("Session not found."); setLoading(false); return; }
+        setProposal(data);
         setEditTitle(data.title);
         setEditDescription(data.description);
         setEditProjectType(data.project_type ?? "");
