@@ -117,6 +117,7 @@ export default function Home() {
     const [loadingConvos, setLoadingConvos] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [initialCid, setInitialCid] = useState<string | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
     const abortRef = useRef<AbortController | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const isActive = session.phase !== "idle";
@@ -165,11 +166,16 @@ export default function Home() {
     }, [isActive, session.chairperson, session.opinions.length, session.deliberations.length, session.consensus, session.statusMessage]);
 
     const deleteConversation = useCallback(async (id: string) => {
-        if (!confirm("Delete this session? This cannot be undone.")) return;
-        await supabase.from("conversations").delete().eq("id", id);
-        if (currentId === id) { setSession(IDLE); setCurrentId(null); }
-        setConversations((prev) => prev.filter((c) => c.id !== id));
-    }, [supabase, currentId]);
+        setDeleteTarget(id);
+    }, []);
+
+    const confirmDelete = useCallback(async () => {
+        if (!deleteTarget) return;
+        await supabase.from("conversations").delete().eq("id", deleteTarget);
+        if (currentId === deleteTarget) { setSession(IDLE); setCurrentId(null); }
+        setConversations((prev) => prev.filter((c) => c.id !== deleteTarget));
+        setDeleteTarget(null);
+    }, [supabase, currentId, deleteTarget]);
 
     const newSession = useCallback(() => {
         abortRef.current?.abort();
@@ -269,6 +275,7 @@ export default function Home() {
     }, [mode, prompt, title, description, projectType, running, saveSession, user]);
 
     return (
+        <>
         <div className="flex h-screen overflow-hidden bg-paper">
             {user && (
                 <Sidebar
@@ -424,5 +431,45 @@ export default function Home() {
                 )}
             </div>
         </div>
+
+        {/* ── Delete confirmation modal ────────────────────────────────── */}
+        {deleteTarget && (
+            <div
+                className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm"
+                onClick={() => setDeleteTarget(null)}
+            >
+                <div
+                    className="bg-paper-light rounded-2xl shadow-[0_24px_64px_-8px_rgba(45,31,22,0.25)] border border-line p-6 w-full max-w-sm"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="flex items-start gap-3 mb-4">
+                        <div className="shrink-0 w-9 h-9 rounded-full bg-rust/10 flex items-center justify-center">
+                            <svg className="w-4.5 h-4.5 text-rust" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-ink text-sm">Delete session?</h3>
+                            <p className="text-xs text-ink-mist mt-1">This will permanently remove the session and all its council results. This cannot be undone.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                        <button
+                            onClick={() => setDeleteTarget(null)}
+                            className="px-4 py-2 text-sm font-medium text-ink-soft hover:text-ink hover:bg-paper-beige rounded-xl transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={confirmDelete}
+                            className="px-4 py-2 text-sm font-semibold bg-rust text-paper-light rounded-xl hover:bg-rust-deep transition-colors shadow-sm"
+                        >
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
