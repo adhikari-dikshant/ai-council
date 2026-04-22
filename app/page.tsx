@@ -165,6 +165,7 @@ export default function Home() {
     }, [isActive, session.chairperson, session.opinions.length, session.deliberations.length, session.consensus, session.statusMessage]);
 
     const deleteConversation = useCallback(async (id: string) => {
+        if (!confirm("Delete this session? This cannot be undone.")) return;
         await supabase.from("conversations").delete().eq("id", id);
         if (currentId === id) { setSession(IDLE); setCurrentId(null); }
         setConversations((prev) => prev.filter((c) => c.id !== id));
@@ -380,10 +381,38 @@ export default function Home() {
                         <div className="shrink-0 border-t border-line-soft bg-paper/90 backdrop-blur-md px-4 sm:px-6 py-3">
                             <div className="max-w-3xl mx-auto">
                                 {mode === "chat" ? (
-                                    <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} compact />
+                                    <div className="flex items-end gap-2">
+                                        <div className="flex-1">
+                                            <PromptBox value={prompt} onChange={setPrompt} onSubmit={convene} running={running} compact />
+                                        </div>
+                                        {currentId && !running && (
+                                            <button
+                                                onClick={() => deleteConversation(currentId)}
+                                                title="Delete this session"
+                                                className="shrink-0 mb-[3px] p-2 rounded-xl text-ink-mist hover:text-rust hover:bg-rust/10 transition-colors"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="flex items-center justify-between gap-3">
-                                        <p className="text-xs text-ink-mist">{running ? "Council is deliberating…" : session.phase === "done" ? "Saved to proposals →" : ""}</p>
+                                        <div className="flex items-center gap-2">
+                                            {currentId && !running && (
+                                                <button
+                                                    onClick={() => deleteConversation(currentId)}
+                                                    title="Delete this session"
+                                                    className="p-1.5 rounded-lg text-ink-mist hover:text-rust hover:bg-rust/10 transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                            <p className="text-xs text-ink-mist">{running ? "Council is deliberating…" : session.phase === "done" ? "Saved to proposals →" : ""}</p>
+                                        </div>
                                         <button onClick={newSession} disabled={running} className="bg-rust text-paper-light text-sm font-semibold px-4 py-2 rounded-xl hover:bg-rust-deep disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm">
                                             Start new proposal →
                                         </button>
