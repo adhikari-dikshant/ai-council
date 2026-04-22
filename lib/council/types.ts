@@ -39,11 +39,25 @@ export interface Consensus {
 
 export type AgentColor = "blue" | "red" | "green" | "purple";
 
+export interface PeerRank {
+  targetAgentId: string;
+  rank: number;
+  justification: string;
+}
+
+export interface PeerRankingEntry {
+  rankerAgentId: string;
+  rankerAgentName: string;
+  emoji: string;
+  rankings: PeerRank[];
+}
+
 export type CouncilPhase =
   | "idle"
   | "analyzing"
   | "thinking"
   | "deliberating"
+  | "ranking"
   | "synthesizing"
   | "done"
   | "error";
@@ -54,6 +68,7 @@ export interface SessionState {
   chairperson?: ChairpersonAnalysis;
   opinions: AgentOpinion[];
   deliberations: Deliberation[];
+  peerRankings?: PeerRankingEntry[];
   consensus?: Consensus;
   error?: string;
 }

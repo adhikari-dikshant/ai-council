@@ -8,7 +8,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { SidebarWrapper } from "@/components/SidebarWrapper";
 import {
-    ChairpersonCard, AgentCard, DelibItem, VerdictCard,
+    ChairpersonCard, AgentCard, DelibItem, VerdictCard, PeerRankingsSection,
 } from "@/components/CouncilCards";
 import { STATUS_LABEL, STATUS_STYLE, type Comment, type Proposal } from "@/lib/types";
 
@@ -257,6 +257,10 @@ export default function ProposalDetailPage() {
                                             {review.deliberations.map((d) => <DelibItem key={d.fromAgentId} d={d} />)}
                                         </div>
                                     </div>
+                                )}
+
+                                {review.peerRankings && review.peerRankings.length > 0 && review.opinions.length > 0 && (
+                                    <PeerRankingsSection opinions={review.opinions} peerRankings={review.peerRankings} />
                                 )}
 
                                 {review.consensus && <VerdictCard c={review.consensus} />}

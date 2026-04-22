@@ -7,10 +7,10 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/Sidebar";
 import {
-    ChairpersonCard, AgentCard, DelibItem, VerdictCard, StatusDots,
+    ChairpersonCard, AgentCard, DelibItem, VerdictCard, PeerRankingsSection, StatusDots,
 } from "@/components/CouncilCards";
 import type {
-    SessionState, AgentOpinion, Deliberation, ChairpersonAnalysis, Consensus,
+    SessionState, AgentOpinion, Deliberation, ChairpersonAnalysis, Consensus, PeerRankingEntry,
 } from "@/lib/council/types";
 import type { ConversationSummary } from "@/components/Sidebar";
 import type { DecisionOutcome } from "@/lib/types";
@@ -254,6 +254,7 @@ export default function Home() {
                             case "chairperson":   update((s) => ({ ...s, chairperson: data as ChairpersonAnalysis })); break;
                             case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
                             case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
+                            case "peer_ranking":  update((s) => ({ ...s, peerRankings: [...(s.peerRankings ?? []), data as PeerRankingEntry] })); break;
                             case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
                             case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live, mode === "proposal" ? { title, description, projectType } : undefined); break;
                             case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
@@ -373,6 +374,10 @@ export default function Home() {
                                             {session.deliberations.map((d) => <DelibItem key={d.fromAgentId} d={d} />)}
                                         </div>
                                     </div>
+                                )}
+
+                                {session.peerRankings && session.peerRankings.length > 0 && session.opinions.length > 0 && (
+                                    <PeerRankingsSection opinions={session.opinions} peerRankings={session.peerRankings} />
                                 )}
 
                                 {session.consensus && <VerdictCard c={session.consensus} />}

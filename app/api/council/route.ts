@@ -4,6 +4,7 @@ import {
   runChairperson,
   getAgentOpinion,
   runDeliberation,
+  runPeerRanking,
   buildConsensus,
 } from "@/lib/council/session";
 
@@ -58,9 +59,14 @@ export async function POST(request: NextRequest) {
         const deliberations = await runDeliberation(opinions, prompt);
         deliberations.forEach((d) => send("deliberation", d));
 
-        // ④ Consensus
+        // ④ Peer ranking — each agent anonymously ranks the others' responses
+        send("status", { phase: "ranking", message: "Agents are anonymously ranking each other's responses…" });
+        const peerRankings = await runPeerRanking(opinions);
+        peerRankings.forEach((r) => send("peer_ranking", r));
+
+        // ⑤ Consensus
         send("status", { phase: "synthesizing", message: "Building consensus…" });
-        const consensus = await buildConsensus(opinions, deliberations, prompt);
+        const consensus = await buildConsensus(opinions, deliberations, prompt, peerRankings);
         send("consensus", consensus);
 
         send("done", {});

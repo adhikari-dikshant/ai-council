@@ -1,7 +1,7 @@
 "use client";
 
 import type {
-    AgentOpinion, Deliberation, ChairpersonAnalysis, Consensus, AgentColor,
+    AgentOpinion, Deliberation, ChairpersonAnalysis, Consensus, AgentColor, PeerRankingEntry,
 } from "@/lib/council/types";
 
 export const COLOR_CLASSES: Record<AgentColor, { border: string; tint: string; badge: string; bar: string }> = {
@@ -167,6 +167,55 @@ export function VerdictCard({ c }: { c: Consensus }) {
                     />
                 </div>
                 <span className="text-xs text-ink-muted tabular-nums">Council confidence: {c.confidence}%</span>
+            </div>
+        </div>
+    );
+}
+
+export function PeerRankingsSection({
+    opinions,
+    peerRankings,
+}: {
+    opinions: AgentOpinion[];
+    peerRankings: PeerRankingEntry[];
+}) {
+    const agentScores = opinions.map((o) => {
+        const received = peerRankings.flatMap((pr) => pr.rankings).filter((r) => r.targetAgentId === o.agentId);
+        const avg = received.length > 0 ? received.reduce((sum, r) => sum + r.rank, 0) / received.length : null;
+        return { agentId: o.agentId, agentName: o.agentName, emoji: o.emoji, color: o.color, avg };
+    }).sort((a, b) => (a.avg ?? 99) - (b.avg ?? 99));
+
+    // maxRank is number of peers each agent is ranked against (opinions.length - 1)
+    const maxRank = opinions.length - 1;
+    const medals = ["🥇", "🥈", "🥉", "4️⃣"];
+
+    return (
+        <div className="animate-fade-in bg-paper-light border border-line rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <span>🏅</span>
+                <span className="font-semibold text-ink-faint text-[11px] tracking-[0.15em] uppercase">Peer Rankings</span>
+                <span className="ml-auto text-[10px] text-ink-mist">Each agent anonymously ranked the others&apos; responses</span>
+            </div>
+            <div className="space-y-2.5">
+                {agentScores.map((agent, i) => {
+                    const pct = agent.avg !== null && maxRank > 1
+                        ? Math.max(0, ((maxRank - agent.avg) / (maxRank - 1)) * 100)
+                        : 50;
+                    const c = COLOR_CLASSES[agent.color];
+                    return (
+                        <div key={agent.agentId} className="flex items-center gap-3">
+                            <span className="w-5 text-center text-sm shrink-0">{medals[i] ?? "·"}</span>
+                            <span className="text-base shrink-0">{agent.emoji}</span>
+                            <span className="text-xs font-medium text-ink w-28 shrink-0 truncate">{agent.agentName}</span>
+                            <div className="flex-1 bg-paper-beige rounded-full h-1.5">
+                                <div className={`h-1.5 rounded-full transition-all duration-700 ${c.bar}`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-ink-muted tabular-nums w-14 text-right shrink-0">
+                                {agent.avg !== null ? `${agent.avg.toFixed(1)} avg` : "—"}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

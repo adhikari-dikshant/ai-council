@@ -1,6 +1,6 @@
 import { callModel } from "../openrouter";
 import { COUNCIL_AGENTS, CHAIRPERSON_MODEL, CONSENSUS_MODEL, formatModelLabel } from "./agents";
-import type { ChairpersonAnalysis, AgentOpinion, Deliberation, Consensus } from "./types";
+import type { ChairpersonAnalysis, AgentOpinion, Deliberation, Consensus, PeerRank, PeerRankingEntry } from "./types";
 
 const CHAIRPERSON_PROMPT = `You are the Chairperson of an AI Council. Analyze incoming requests and structure them for the council.
 
@@ -163,10 +163,68 @@ React briefly (2-3 sentences) from your ${current.role} perspective. Start your 
   );
 }
 
+export async function runPeerRanking(opinions: AgentOpinion[]): Promise<PeerRankingEntry[]> {
+  return Promise.all(
+    opinions.map(async (rater) => {
+      const agent = COUNCIL_AGENTS.find((a) => a.id === rater.agentId)!;
+      const others = opinions.filter((o) => o.agentId !== rater.agentId);
+      // Shuffle to prevent positional bias in ranking
+      const shuffled = [...others].sort(() => Math.random() - 0.5);
+      const LABELS = ["Response A", "Response B", "Response C"];
+      const labeled = shuffled.map((o, i) => ({ label: LABELS[i], opinion: o }));
+
+      const responsesText = labeled
+        .map(({ label, opinion }) => `### ${label}\n${opinion.content}`)
+        .join("\n\n---\n\n");
+
+      const rankingPrompt = `You are reviewing ${others.length} anonymous peer responses to the same proposal. Rank them from BEST (rank 1) to WORST (rank ${others.length}) based on depth, accuracy, and actionability.
+
+PEER RESPONSES:
+${responsesText}
+
+Return ONLY valid JSON (no markdown fences):
+{
+  "rankings": [
+    { "label": "Response A", "rank": 1, "justification": "one concise sentence" },
+    { "label": "Response B", "rank": 2, "justification": "one concise sentence" },
+    { "label": "Response C", "rank": 3, "justification": "one concise sentence" }
+  ]
+}`;
+
+      const response = await callModel({
+        model: resolvedModel(agent.model),
+        systemPrompt: `You are ${rater.agentName}, providing objective peer review of anonymous council responses.`,
+        messages: [{ role: "user", content: rankingPrompt }],
+        temperature: 0.3,
+      });
+
+      let rankings: PeerRank[] = [];
+      try {
+        const parsed = JSON.parse(extractJson(response)) as {
+          rankings: { label: string; rank: number; justification: string }[];
+        };
+        rankings = parsed.rankings.map((r) => {
+          const match = labeled.find((lm) => lm.label === r.label);
+          return {
+            targetAgentId: match?.opinion.agentId ?? r.label,
+            rank: r.rank,
+            justification: r.justification,
+          };
+        });
+      } catch {
+        rankings = others.map((o, i) => ({ targetAgentId: o.agentId, rank: i + 1, justification: "" }));
+      }
+
+      return { rankerAgentId: rater.agentId, rankerAgentName: rater.agentName, emoji: rater.emoji, rankings };
+    })
+  );
+}
+
 export async function buildConsensus(
   opinions: AgentOpinion[],
   deliberations: Deliberation[],
-  userPrompt: string
+  userPrompt: string,
+  peerRankings?: PeerRankingEntry[],
 ): Promise<Consensus> {
   const opinionsText = opinions
     .map((o) => `### ${o.agentName} (${o.role}, via ${o.modelLabel})\n${o.content}`)
@@ -176,6 +234,16 @@ export async function buildConsensus(
     .map((d) => `${d.fromAgentName}: ${d.critique}`)
     .join("\n\n");
 
+  let rankingSummary = "";
+  if (peerRankings && peerRankings.length > 0) {
+    const scores: Record<string, number[]> = {};
+    peerRankings.forEach((pr) => pr.rankings.forEach((r) => { (scores[r.targetAgentId] ??= []).push(r.rank); }));
+    const sorted = Object.entries(scores)
+      .map(([id, ranks]) => ({ name: opinions.find((o) => o.agentId === id)?.agentName ?? id, avg: ranks.reduce((a, b) => a + b, 0) / ranks.length }))
+      .sort((a, b) => a.avg - b.avg);
+    rankingSummary = `\nPEER RANKINGS (rank 1 = most valued by peers):\n${sorted.map((s) => `- ${s.name}: avg rank ${s.avg.toFixed(2)}`).join("\n")}\n`;
+  }
+
   const consensusPrompt = `Original request: "${userPrompt}"
 
 INITIAL OPINIONS:
@@ -183,7 +251,7 @@ ${opinionsText}
 
 DELIBERATION ROUND:
 ${deliberationsText}
-
+${rankingSummary}
 Synthesize a final council recommendation.`;
 
   const response = await callModel({
