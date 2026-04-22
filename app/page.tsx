@@ -6,9 +6,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/Sidebar";
-import {
-    ChairpersonCard, AgentCard, DelibItem, VerdictCard, PeerRankingsSection, StatusDots,
-} from "@/components/CouncilCards";
+import { StatusDots } from "@/components/CouncilCards";
+import { CouncilStepper } from "@/components/CouncilStepper";
 import type {
     SessionState, AgentOpinion, Deliberation, ChairpersonAnalysis, Consensus, PeerRankingEntry,
 } from "@/lib/council/types";
@@ -350,10 +349,8 @@ export default function Home() {
                 ) : (
                     <>
                         <main className="flex-1 overflow-y-auto">
-                            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6 space-y-4 sm:space-y-6">
-                                {session.statusMessage && <StatusDots message={session.statusMessage} />}
-                                {session.error && <div className="bg-agent-security/10 border border-agent-security/30 rounded-xl p-4 text-sm text-agent-security">{session.error}</div>}
-
+                            <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-5 sm:pt-6 pb-6 space-y-4">
+                                {/* User prompt bubble */}
                                 {session.chairperson && (
                                     <div className="flex justify-end">
                                         <div className="bg-rust/10 border border-rust/20 rounded-2xl rounded-tr-sm px-4 py-3 max-w-lg text-[14px] text-ink-soft leading-relaxed">
@@ -362,31 +359,20 @@ export default function Home() {
                                     </div>
                                 )}
 
-                                {session.chairperson && <ChairpersonCard a={session.chairperson} />}
+                                {/* Initial loading (before first event arrives) */}
+                                {session.statusMessage && !session.chairperson && (
+                                    <StatusDots message={session.statusMessage} />
+                                )}
 
-                                {session.opinions.length > 0 && (
-                                    <div>
-                                        <h3 className="text-[11px] font-semibold text-ink-faint tracking-[0.15em] uppercase mb-3">Council Positions</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {session.opinions.map((o) => <AgentCard key={o.agentId} o={o} />)}
-                                        </div>
+                                {session.error && (
+                                    <div className="bg-agent-security/10 border border-agent-security/30 rounded-xl p-4 text-sm text-agent-security">
+                                        {session.error}
                                     </div>
                                 )}
 
-                                {session.deliberations.length > 0 && (
-                                    <div>
-                                        <h3 className="text-[11px] font-semibold text-ink-faint tracking-[0.15em] uppercase mb-3">Deliberation</h3>
-                                        <div className="space-y-2">
-                                            {session.deliberations.map((d) => <DelibItem key={d.fromAgentId} d={d} />)}
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Connected stepper — all phases as clickable steps */}
+                                {session.chairperson && <CouncilStepper session={session} />}
 
-                                {session.peerRankings && session.peerRankings.length > 0 && session.opinions.length > 0 && (
-                                    <PeerRankingsSection opinions={session.opinions} peerRankings={session.peerRankings} />
-                                )}
-
-                                {session.consensus && <VerdictCard c={session.consensus} />}
                                 <div ref={bottomRef} />
                             </div>
                         </main>
