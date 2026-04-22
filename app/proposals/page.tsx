@@ -12,16 +12,16 @@ import type { SessionState } from "@/lib/council/types";
 type ProposalStatus = "submitted" | "approved" | "rejected" | "revision_required";
 
 const STATUS_LABEL: Record<ProposalStatus, string> = {
-    submitted:         "Submitted",
-    approved:          "Approved",
-    rejected:          "Rejected",
+    submitted: "Submitted",
+    approved: "Approved",
+    rejected: "Rejected",
     revision_required: "Revision required",
 };
 
 const STATUS_STYLE: Record<ProposalStatus, string> = {
-    submitted:         "bg-honey/10 text-honey border-honey/30",
-    approved:          "bg-agent-cost/10 text-agent-cost border-agent-cost/30",
-    rejected:          "bg-agent-security/10 text-agent-security border-agent-security/30",
+    submitted: "bg-honey/10 text-honey border-honey/30",
+    approved: "bg-agent-cost/10 text-agent-cost border-agent-cost/30",
+    rejected: "bg-agent-security/10 text-agent-security border-agent-security/30",
     revision_required: "bg-honey/10 text-honey border-honey/30",
 };
 
@@ -95,7 +95,7 @@ export default function ProposalsPage() {
     return (
         <SidebarWrapper>
             <div className="flex-1 overflow-y-auto">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
                     <div className="flex items-center justify-between gap-3 mb-6">
                         <div>
                             <h1 className="text-2xl font-bold text-ink">Proposals</h1>
@@ -124,11 +124,10 @@ export default function ProposalsPage() {
                                 <button
                                     key={s}
                                     onClick={() => setFilter(s)}
-                                    className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
-                                        filter === s
+                                    className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${filter === s
                                             ? "bg-rust text-paper-light border-rust"
                                             : "bg-paper-light text-ink-soft border-line hover:border-ink-mist"
-                                    }`}
+                                        }`}
                                 >
                                     {s === "all" ? "All" : STATUS_LABEL[s]}
                                 </button>

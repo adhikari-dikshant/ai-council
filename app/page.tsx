@@ -250,14 +250,14 @@ export default function Home() {
                         const data = JSON.parse(line.slice(6));
                         const ev = currentEvent; currentEvent = "";
                         switch (ev) {
-                            case "status":        update((s) => ({ ...s, phase: data.phase, statusMessage: data.message })); break;
-                            case "chairperson":   update((s) => ({ ...s, chairperson: data as ChairpersonAnalysis })); break;
+                            case "status": update((s) => ({ ...s, phase: data.phase, statusMessage: data.message })); break;
+                            case "chairperson": update((s) => ({ ...s, chairperson: data as ChairpersonAnalysis })); break;
                             case "agent_opinion": update((s) => ({ ...s, opinions: [...s.opinions, data as AgentOpinion] })); break;
-                            case "deliberation":  update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
-                            case "peer_ranking":  update((s) => ({ ...s, peerRankings: [...(s.peerRankings ?? []), data as PeerRankingEntry] })); break;
-                            case "consensus":     update((s) => ({ ...s, consensus: data as Consensus })); break;
-                            case "done":          update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live, mode === "proposal" ? { title, description, projectType } : undefined); break;
-                            case "error":         update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
+                            case "deliberation": update((s) => ({ ...s, deliberations: [...s.deliberations, data as Deliberation] })); break;
+                            case "peer_ranking": update((s) => ({ ...s, peerRankings: [...(s.peerRankings ?? []), data as PeerRankingEntry] })); break;
+                            case "consensus": update((s) => ({ ...s, consensus: data as Consensus })); break;
+                            case "done": update((s) => ({ ...s, phase: "done", statusMessage: "" })); if (user) await saveSession(saveTitle, promptText, live, mode === "proposal" ? { title, description, projectType } : undefined); break;
+                            case "error": update((s) => ({ ...s, phase: "error", statusMessage: "", error: data.message })); break;
                         }
                     } catch { currentEvent = ""; }
                 }
@@ -344,7 +344,7 @@ export default function Home() {
                 ) : (
                     <>
                         <main className="flex-1 overflow-y-auto">
-                            <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6 space-y-4 sm:space-y-6">
+                            <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 pb-6 space-y-4 sm:space-y-6">
                                 {session.statusMessage && <StatusDots message={session.statusMessage} />}
                                 {session.error && <div className="bg-agent-security/10 border border-agent-security/30 rounded-xl p-4 text-sm text-agent-security">{session.error}</div>}
 
