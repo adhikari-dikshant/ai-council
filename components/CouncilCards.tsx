@@ -70,6 +70,13 @@ export function ChairpersonCard({ a }: { a: ChairpersonAnalysis }) {
 
 export function AgentCard({ o }: { o: AgentOpinion }) {
     const c = COLOR_CLASSES[o.color];
+    // Strip lines that are already shown as badges/quotes to avoid duplication
+    const bodyLines = o.content
+        .split("\n")
+        .filter((l) => !l.match(/^\*\*Assessment:\*\*/i) && !l.match(/^\*\*Vote:\*\*/i) && !l.match(/^\*\*Confidence:\*\*/i))
+        .join("\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
     return (
         <div className={`animate-fade-in ${c.tint} border ${c.border} rounded-2xl p-5 flex flex-col shadow-[0_1px_2px_rgba(45,31,22,0.04)]`}>
             <div className="flex items-start justify-between mb-3">
@@ -91,7 +98,7 @@ export function AgentCard({ o }: { o: AgentOpinion }) {
                 </div>
             </div>
             {o.assessment && <p className="text-[13px] text-ink-soft italic border-l-2 border-line pl-3 mb-3 leading-relaxed">{o.assessment}</p>}
-            <MD text={o.content} className="text-[13px] text-ink-muted leading-relaxed space-y-0.5 flex-1" />
+            <MD text={bodyLines} className="text-[13px] text-ink-muted leading-relaxed space-y-0.5 flex-1" />
             <div className="flex items-center gap-2 mt-3">
                 <div className="flex-1 bg-paper-beige rounded-full h-1">
                     <div className={`h-1 rounded-full transition-all duration-700 ${c.bar}`} style={{ width: `${o.confidence}%` }} />

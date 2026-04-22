@@ -230,7 +230,7 @@ export default function Home() {
         try {
             const res = await fetch("/api/council", {
                 method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: promptText }), signal: abort.signal,
+                body: JSON.stringify({ prompt: promptText, mode }), signal: abort.signal,
             });
             if (!res.ok || !res.body) throw new Error((await res.json().catch(() => ({}))).error ?? "Request failed");
 
@@ -330,7 +330,10 @@ export default function Home() {
                             )}
 
                             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                                {[["🏗️", "Architect · GPT-4o mini"], ["🔐", "Security · Claude 3 Haiku"], ["💸", "Cost · Gemini 1.5 Flash"], ["😈", "Devil's Advocate · Llama 3.1 8B"]].map(([e, l]) => (
+                                {(mode === "chat"
+                                    ? [["🔍", "Analyst · GPT-4o mini"], ["🎯", "Pragmatist · Gemini 1.5 Flash"], ["🦅", "Visionary · Llama 3.1 8B"], ["😈", "Devil's Advocate · Claude 3 Haiku"]]
+                                    : [["🏗️", "Architect · GPT-4o mini"], ["🔐", "Security · Claude 3 Haiku"], ["💸", "Cost · Gemini 1.5 Flash"], ["😈", "Devil's Advocate · Llama 3.1 8B"]]
+                                ).map(([e, l]) => (
                                     <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
                                 ))}
                             </div>

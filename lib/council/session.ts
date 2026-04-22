@@ -1,5 +1,6 @@
 import { callModel } from "../openrouter";
-import { COUNCIL_AGENTS, CHAIRPERSON_MODEL, CONSENSUS_MODEL, formatModelLabel } from "./agents";
+import { CHAIRPERSON_MODEL, CONSENSUS_MODEL, CHAT_CONSENSUS_PROMPT, formatModelLabel } from "./agents";
+import type { AgentConfig } from "./agents";
 import type { ChairpersonAnalysis, AgentOpinion, Deliberation, Consensus, PeerRank, PeerRankingEntry } from "./types";
 
 const CHAIRPERSON_PROMPT = `You are the Chairperson of an AI Council. Analyze incoming requests and structure them for the council.
@@ -70,7 +71,7 @@ export async function runChairperson(prompt: string): Promise<ChairpersonAnalysi
 }
 
 export async function getAgentOpinion(
-  agent: (typeof COUNCIL_AGENTS)[number],
+  agent: AgentConfig,
   userPrompt: string,
   analysis: ChairpersonAnalysis
 ): Promise<AgentOpinion> {
@@ -125,7 +126,6 @@ export async function runDeliberation(
 ): Promise<Deliberation[]> {
   return Promise.all(
     opinions.map(async (current) => {
-      const agent = COUNCIL_AGENTS.find((a) => a.id === current.agentId)!;
       const othersSummary = opinions
         .filter((o) => o.agentId !== current.agentId)
         .map((o) => `${o.agentName} (${o.role}): ${o.assessment}`)
@@ -139,7 +139,7 @@ ${othersSummary}
 React briefly (2-3 sentences) from your ${current.role} perspective. Start your response with exactly one of: AGREE, PARTIAL, or DISAGREE — then explain.`;
 
       const response = await callModel({
-        model: resolvedModel(agent.model),
+        model: resolvedModel(current.model),
         systemPrompt: `You are the ${current.agentName} on an AI Council (${current.role}). Be direct and opinionated.`,
         messages: [{ role: "user", content: deliberationPrompt }],
         temperature: 0.8,
@@ -166,7 +166,6 @@ React briefly (2-3 sentences) from your ${current.role} perspective. Start your 
 export async function runPeerRanking(opinions: AgentOpinion[]): Promise<PeerRankingEntry[]> {
   return Promise.all(
     opinions.map(async (rater) => {
-      const agent = COUNCIL_AGENTS.find((a) => a.id === rater.agentId)!;
       const others = opinions.filter((o) => o.agentId !== rater.agentId);
       // Shuffle to prevent positional bias in ranking
       const shuffled = [...others].sort(() => Math.random() - 0.5);
@@ -192,7 +191,7 @@ Return ONLY valid JSON (no markdown fences):
 }`;
 
       const response = await callModel({
-        model: resolvedModel(agent.model),
+        model: resolvedModel(rater.model),
         systemPrompt: `You are ${rater.agentName}, providing objective peer review of anonymous council responses.`,
         messages: [{ role: "user", content: rankingPrompt }],
         temperature: 0.3,
@@ -225,6 +224,7 @@ export async function buildConsensus(
   deliberations: Deliberation[],
   userPrompt: string,
   peerRankings?: PeerRankingEntry[],
+  mode?: "chat" | "proposal",
 ): Promise<Consensus> {
   const opinionsText = opinions
     .map((o) => `### ${o.agentName} (${o.role}, via ${o.modelLabel})\n${o.content}`)
@@ -256,7 +256,7 @@ Synthesize a final council recommendation.`;
 
   const response = await callModel({
     model: CONSENSUS_MODEL,
-    systemPrompt: CONSENSUS_PROMPT,
+    systemPrompt: mode === "chat" ? CHAT_CONSENSUS_PROMPT : CONSENSUS_PROMPT,
     messages: [{ role: "user", content: consensusPrompt }],
     temperature: 0.4,
   });

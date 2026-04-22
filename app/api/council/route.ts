@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { COUNCIL_AGENTS } from "@/lib/council/agents";
+import { COUNCIL_AGENTS, CHAT_AGENTS } from "@/lib/council/agents";
 import {
   runChairperson,
   getAgentOpinion,
@@ -20,13 +20,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { prompt } = await request.json();
+  const body = await request.json();
+  const { prompt, mode = "proposal" } = body as { prompt: string; mode?: "chat" | "proposal" };
   if (!prompt?.trim()) {
     return new Response(JSON.stringify({ error: "prompt is required" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
   }
+  const agents = mode === "chat" ? CHAT_AGENTS : COUNCIL_AGENTS;
 
   const encoder = new TextEncoder();
 
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         // ② Council agents think in parallel
         send("status", { phase: "thinking", message: "Council agents are formulating their positions…" });
         const opinions = await Promise.all(
-          COUNCIL_AGENTS.map(async (agent) => {
+          agents.map(async (agent) => {
             const opinion = await getAgentOpinion(agent, prompt, analysis);
             send("agent_opinion", opinion);
             return opinion;
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         // ⑤ Consensus
         send("status", { phase: "synthesizing", message: "Building consensus…" });
-        const consensus = await buildConsensus(opinions, deliberations, prompt, peerRankings);
+        const consensus = await buildConsensus(opinions, deliberations, prompt, peerRankings, mode);
         send("consensus", consensus);
 
         send("done", {});
