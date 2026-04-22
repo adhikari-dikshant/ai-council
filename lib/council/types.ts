@@ -3,6 +3,14 @@ export interface ChairpersonAnalysis {
   dimensions: string[];
   context: string;
   scope: string;
+  agents?: DynamicAgentDef[]; // populated in chat mode — council assembled per question
+}
+
+export interface DynamicAgentDef {
+  name: string;
+  emoji: string;
+  role: string;
+  focus: string; // one sentence describing the angle this expert analyzes from
 }
 
 export interface AgentOpinion {

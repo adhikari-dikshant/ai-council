@@ -1,4 +1,4 @@
-import type { AgentColor } from "./types";
+import type { AgentColor, DynamicAgentDef } from "./types";
 
 export interface AgentConfig {
   id: string;
@@ -220,6 +220,61 @@ Return ONLY valid JSON (no markdown code fences) in this exact shape:
   "decision": "approved" | "rejected" | "revision_required",
   "riskLevel": "low" | "medium" | "high"
 }`;
+
+// Prompt used by the Chairperson in chat mode to also assemble the council dynamically
+export const CHAT_CHAIRPERSON_PROMPT = `You are the Chairperson of an AI Council. Analyze the incoming question and assemble the perfect council of exactly 4 expert perspectives to evaluate it.
+
+Return ONLY valid JSON (no markdown code fences) in this exact shape:
+{
+  "intent": "clear statement of what needs to be decided or understood",
+  "dimensions": ["angle1", "angle2", "angle3", "angle4"],
+  "context": "relevant context and constraints",
+  "scope": "brief description of the question scope",
+  "agents": [
+    {
+      "name": "Expert Title",
+      "emoji": "🔍",
+      "role": "Domain of Expertise",
+      "focus": "One sentence describing exactly what angle this expert analyzes from"
+    }
+  ]
+}
+
+Choose 4 agents that cover the most important, genuinely different angles for THIS specific question. Make them opinionated domain experts, not generic advisors. Always include at least one critical or skeptical voice.`;
+
+// Rotate across all available models and colors for dynamically-assembled agents
+const DYNAMIC_MODELS = [
+  { model: "openai/gpt-4o-mini",                modelLabel: "GPT-4o mini"      },
+  { model: "google/gemini-flash-1.5",            modelLabel: "Gemini 1.5 Flash" },
+  { model: "meta-llama/llama-3.1-8b-instruct",   modelLabel: "Llama 3.1 8B"    },
+  { model: "anthropic/claude-3-haiku",           modelLabel: "Claude 3 Haiku"   },
+];
+const DYNAMIC_COLORS: AgentColor[] = ["blue", "green", "purple", "red"];
+
+export function buildDynamicAgentConfigs(defs: DynamicAgentDef[]): AgentConfig[] {
+  return defs.map((def, i) => ({
+    id: `agent-${i}`,
+    name: def.name,
+    emoji: def.emoji,
+    role: def.role,
+    color: DYNAMIC_COLORS[i % DYNAMIC_COLORS.length],
+    model: DYNAMIC_MODELS[i % DYNAMIC_MODELS.length].model,
+    modelLabel: DYNAMIC_MODELS[i % DYNAMIC_MODELS.length].modelLabel,
+    systemPrompt: `You are ${def.name} on an AI Council, providing the ${def.role} perspective. ${def.focus}
+
+Be specific and opinionated. Give concrete, actionable analysis.
+
+Respond in this exact format:
+**Assessment:** [1-2 sentence verdict from your specific perspective]
+**Key Points:**
+- [point 1]
+- [point 2]
+- [point 3]
+**Recommendation:** [specific advice]
+**Vote:** [exactly one of: APPROVE, REJECT, REVISE]
+**Confidence:** [number 0-100]`,
+  }));
+}
 
 export const CHAIRPERSON_MODEL = "openai/gpt-4o-mini";
 export const CONSENSUS_MODEL = "openai/gpt-4o-mini";

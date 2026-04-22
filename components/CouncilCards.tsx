@@ -64,6 +64,22 @@ export function ChairpersonCard({ a }: { a: ChairpersonAnalysis }) {
                 {a.dimensions.map((d) => <span key={d} className="text-xs bg-honey/10 text-honey rounded-full px-2.5 py-0.5 font-medium">{d}</span>)}
             </div>
             <p className="text-xs text-ink-muted leading-relaxed">{a.context}</p>
+            {a.agents && a.agents.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-honey/15">
+                    <p className="text-[10px] font-semibold text-honey uppercase tracking-[0.12em] mb-2.5">Council assembled</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {a.agents.map((ag, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                                <span className="text-base shrink-0">{ag.emoji}</span>
+                                <div className="min-w-0">
+                                    <div className="text-xs font-semibold text-ink truncate">{ag.name}</div>
+                                    <div className="text-[10px] text-ink-faint truncate">{ag.role}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

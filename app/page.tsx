@@ -330,12 +330,15 @@ export default function Home() {
                             )}
 
                             <div className="mt-6 flex flex-wrap justify-center gap-2">
-                                {(mode === "chat"
-                                    ? [["🔍", "Analyst · GPT-4o mini"], ["🎯", "Pragmatist · Gemini 1.5 Flash"], ["🦅", "Visionary · Llama 3.1 8B"], ["😈", "Devil's Advocate · Claude 3 Haiku"]]
-                                    : [["🏗️", "Architect · GPT-4o mini"], ["🔐", "Security · Claude 3 Haiku"], ["💸", "Cost · Gemini 1.5 Flash"], ["😈", "Devil's Advocate · Llama 3.1 8B"]]
-                                ).map(([e, l]) => (
-                                    <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
-                                ))}
+                                {mode === "chat" ? (
+                                    <span className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-4 py-1.5 italic">
+                                        🪄 Council assembled for your question
+                                    </span>
+                                ) : (
+                                    [["🏗️", "Architect · GPT-4o mini"], ["🔐", "Security · Claude 3 Haiku"], ["💸", "Cost · Gemini 1.5 Flash"], ["😈", "Devil's Advocate · Llama 3.1 8B"]].map(([e, l]) => (
+                                        <span key={l} className="text-xs text-ink-faint bg-paper-light border border-line rounded-full px-3 py-1">{e} {l}</span>
+                                    ))
+                                )}
                             </div>
                             {!user && (
                                 <p className="text-center text-xs text-ink-mist mt-6">

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { COUNCIL_AGENTS, CHAT_AGENTS } from "@/lib/council/agents";
+import { COUNCIL_AGENTS, CHAT_AGENTS, buildDynamicAgentConfigs } from "@/lib/council/agents";
 import {
   runChairperson,
   getAgentOpinion,
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
-  const agents = mode === "chat" ? CHAT_AGENTS : COUNCIL_AGENTS;
+  // agents resolved after chairperson (chat mode assembles council dynamically)
 
   const encoder = new TextEncoder();
 
@@ -41,10 +41,15 @@ export async function POST(request: NextRequest) {
       };
 
       try {
-        // ① Chairperson analysis
+        // ① Chairperson analysis — in chat mode also assembles the council
         send("status", { phase: "analyzing", message: "The Chairperson is analyzing your request…" });
-        const analysis = await runChairperson(prompt);
+        const analysis = await runChairperson(prompt, mode);
         send("chairperson", analysis);
+
+        // Resolve agents: chat mode assembles council from chairperson output
+        const agents = mode === "chat"
+          ? (analysis.agents?.length ? buildDynamicAgentConfigs(analysis.agents) : CHAT_AGENTS)
+          : COUNCIL_AGENTS;
 
         // ② Council agents think in parallel
         send("status", { phase: "thinking", message: "Council agents are formulating their positions…" });

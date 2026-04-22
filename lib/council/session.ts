@@ -1,5 +1,5 @@
 import { callModel } from "../openrouter";
-import { CHAIRPERSON_MODEL, CONSENSUS_MODEL, CHAT_CONSENSUS_PROMPT, formatModelLabel } from "./agents";
+import { CHAIRPERSON_MODEL, CONSENSUS_MODEL, CHAT_CHAIRPERSON_PROMPT, CHAT_CONSENSUS_PROMPT, formatModelLabel } from "./agents";
 import type { AgentConfig } from "./agents";
 import type { ChairpersonAnalysis, AgentOpinion, Deliberation, Consensus, PeerRank, PeerRankingEntry } from "./types";
 
@@ -50,17 +50,31 @@ function resolvedModel(agentModel: string): string {
   return process.env.COUNCIL_MODEL ?? agentModel;
 }
 
-export async function runChairperson(prompt: string): Promise<ChairpersonAnalysis> {
+export async function runChairperson(prompt: string, mode?: "chat" | "proposal"): Promise<ChairpersonAnalysis> {
   const response = await callModel({
     model: CHAIRPERSON_MODEL,
-    systemPrompt: CHAIRPERSON_PROMPT,
+    systemPrompt: mode === "chat" ? CHAT_CHAIRPERSON_PROMPT : CHAIRPERSON_PROMPT,
     messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
+    temperature: 0.4,
   });
 
   try {
     return JSON.parse(extractJson(response)) as ChairpersonAnalysis;
   } catch {
+    if (mode === "chat") {
+      return {
+        intent: prompt,
+        dimensions: ["Logic & Evidence", "Practical Impact", "Long-term View", "Critical Challenge"],
+        context: "Open-ended question requiring multiple perspectives",
+        scope: "Full multi-angle analysis",
+        agents: [
+          { name: "Analyst",          emoji: "🔍", role: "Logic & Evidence",    focus: "Apply clear reasoning and evidence to evaluate the question objectively." },
+          { name: "Pragmatist",       emoji: "🎯", role: "Practical Impact",    focus: "Focus on real-world implications and practical outcomes." },
+          { name: "Visionary",        emoji: "🦅", role: "Long-term View",      focus: "Consider long-term consequences and second-order effects." },
+          { name: "Devil's Advocate", emoji: "😈", role: "Critical Challenge",  focus: "Challenge assumptions and find flaws in the prevailing view." },
+        ],
+      };
+    }
     return {
       intent: prompt,
       dimensions: ["Technical feasibility", "Risk & security", "Cost efficiency", "Failure modes"],
