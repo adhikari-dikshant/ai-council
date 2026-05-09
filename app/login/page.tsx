@@ -37,7 +37,11 @@ export default function LoginPage() {
       if (error) { setError(error.message); setLoading(false); }
       else window.location.href = "/";
     } else {
-      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
       if (error) { setError(error.message); setLoading(false); }
       else window.location.href = "/";
     }
